@@ -6,7 +6,15 @@ It feels very good. It's not a replacement, it's just a POC.
 
 It's completly crazy, but it works (for the basics, on linux only, and with "chrome app mode" only).
 
+## to test
 
+Clone the repo, and inside the repo, type :
+```
+uv sync
+uv run main2.py
+```
+
+(the main2's app was created by antigravity too)
 
 ## Antigravity resumes :
 
