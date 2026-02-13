@@ -25,4 +25,7 @@ class WebApp(BaseRunner):
             logger.info("Opened default browser at %s", url)
 
         threading.Thread(target=launch, daemon=True).start()
-        uvicorn.run(self.app.app, host=host, port=port)
+        
+        from ..server import WebServer
+        ws = WebServer(self.app)
+        uvicorn.run(ws.app, host=host, port=port)

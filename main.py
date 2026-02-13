@@ -27,5 +27,4 @@ class App(Tag.App):
 
 if __name__ == "__main__":
     from htag import ChromeApp
-    p = App()
-    ChromeApp(p).run()
+    ChromeApp(App).run()

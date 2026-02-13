@@ -36,8 +36,8 @@ class ChromeApp(BaseRunner):
                         pass
                 
                 atexit.register(cleanup)
-                # Store cleanup in app if needed (though runner handles it via atexit)
-                self.app._browser_cleanup = cleanup
+                # Cleanup logic will be attached to instances via on_instance callback
+                self._cleanup_func = cleanup
                 
                 browsers = ["google-chrome", "chromium-browser", "chromium", "chrome"]
                 found = False
@@ -66,4 +66,11 @@ class ChromeApp(BaseRunner):
 
             threading.Thread(target=launch, daemon=True).start()
 
-        uvicorn.run(self.app.app, host=host, port=port)
+        from ..server import WebServer
+        # Use on_instance to attach cleanup if it's defined (kiosk mode only)
+        on_inst = None
+        if hasattr(self, "_cleanup_func"):
+            on_inst = lambda inst: setattr(inst, "_browser_cleanup", self._cleanup_func)
+            
+        ws = WebServer(self.app, on_instance=on_inst)
+        uvicorn.run(ws.app, host=host, port=port)

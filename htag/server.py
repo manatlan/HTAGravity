@@ -2,7 +2,7 @@ import asyncio
 import json
 import os
 import threading
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response, Cookie
 from fastapi.responses import HTMLResponse
 import logging
 import inspect
@@ -75,74 +75,140 @@ function htag_event(id, event_name, event) {
 }
 """
 
+# --- WebServer ---
+
+class WebServer:
+    def __init__(self, tag_entity, on_instance=None):
+        import threading
+        self._lock = threading.Lock()
+        self.tag_entity = tag_entity # Class or Instance
+        self.on_instance = on_instance # Optional callback(instance)
+        self.instances = {} # sid -> App instance
+        self.app = FastAPI()
+        self._setup_routes()
+
+    def _get_instance(self, sid):
+        if sid not in self.instances:
+            with self._lock:
+                if sid not in self.instances:
+                    if inspect.isclass(self.tag_entity):
+                        self.instances[sid] = self.tag_entity()
+                        logger.info("Created new session instance for sid: %s", sid)
+                    else:
+                        self.instances[sid] = self.tag_entity
+                        logger.info("Using shared instance for session sid: %s", sid)
+                    
+                    if self.on_instance:
+                        self.on_instance(self.instances[sid])
+                    
+                    # Store a backlink to the webserver for session-aware logic
+                    self.instances[sid]._webserver = self
+
+        return self.instances[sid]
+
+    def _setup_routes(self):
+        @self.app.get("/", response_class=HTMLResponse)
+        async def get(request: Request, response: Response, htag_sid: str = Cookie(None)):
+            if htag_sid is None:
+                import uuid
+                htag_sid = str(uuid.uuid4())
+            
+            instance = self._get_instance(htag_sid)
+            res = HTMLResponse(instance._render_page())
+            res.set_cookie("htag_sid", htag_sid)
+            return res
+
+        @self.app.get("/favicon.ico")
+        async def favicon():
+            return Response(status_code=204)
+
+        @self.app.websocket("/ws")
+        async def websocket_endpoint(websocket: WebSocket):
+            htag_sid = websocket.cookies.get("htag_sid")
+            instance = self._get_instance(htag_sid)
+            await instance._handle_websocket(websocket)
+
 # --- App ---
 
 class App(GTag):
     def __init__(self, *args, **kwargs):
         super().__init__("body", *args, **kwargs)
         self.exit_on_disconnect = True # Default behavior
-        self.app = FastAPI()
         self.websockets = set()
         self.sent_statics = set() # Track assets already in browser
-        self.setup_routes()
 
-    def setup_routes(self):
-        @self.app.get("/", response_class=HTMLResponse)
-        async def get():
-            # Collect ALL statics from the whole tree on first load
-            self.sent_statics.clear()
-            all_statics = []
-            self.collect_statics(self, all_statics)
-            self.sent_statics.update(all_statics)
-            statics_html = "".join(all_statics)
+    @property
+    def app(self):
+        """Property for backward compatibility: returns a FastAPI instance hosting this App."""
+        if not hasattr(self, "_app_host"):
+            self._app_host = WebServer(self)
+        return self._app_host.app
+    def _render_page(self):
+        # Collect ALL statics from the whole tree on first load
+        self.sent_statics.clear()
+        all_statics = []
+        self.collect_statics(self, all_statics)
+        self.sent_statics.update(all_statics)
+        statics_html = "".join(all_statics)
 
-            html_content = f"""
-            <!DOCTYPE html>
-            <html>
-                <head>
-                    <title>htagravity</title>
-                    <script>{CLIENT_JS}</script>
-                    {statics_html}
-                </head>
-                {self.render_initial()}
-            </html>
-            """
-            return html_content
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+            <head>
+                <title>htagravity</title>
+                <script>{CLIENT_JS}</script>
+                {statics_html}
+            </head>
+            {self.render_initial()}
+        </html>
+        """
+        return html_content
 
-        @self.app.websocket("/ws")
-        async def websocket_endpoint(websocket: WebSocket):
-            await websocket.accept()
-            self.websockets.add(websocket)
-            logger.info("New WebSocket connection (Total clients: %d)", len(self.websockets))
-            
-            # Send initial state on connection/reconnection
-            try:
-                await websocket.send_text(json.dumps({
-                    "action": "update",
-                    "updates": {self.id: self.render_initial()}
-                }))
-                logger.debug("Sent initial state to client")
-            except Exception as e:
-                logger.error("Failed to send initial state: %s", e)
 
-            try:
-                while True:
-                    data = await websocket.receive_text()
-                    msg = json.loads(data)
-                    await self.handle_event(msg, websocket)
-            except WebSocketDisconnect:
+    async def _handle_websocket(self, websocket: WebSocket):
+        await websocket.accept()
+        self.websockets.add(websocket)
+        logger.info("New WebSocket connection (Total clients: %d)", len(self.websockets))
+        
+        # Send initial state on connection/reconnection
+        try:
+            await websocket.send_text(json.dumps({
+                "action": "update",
+                "updates": {self.id: self.render_initial()}
+            }))
+            logger.debug("Sent initial state to client")
+        except Exception as e:
+            logger.error("Failed to send initial state: %s", e)
+
+        try:
+            while True:
+                data = await websocket.receive_text()
+                msg = json.loads(data)
+                await self.handle_event(msg, websocket)
+        except WebSocketDisconnect:
+            if websocket in self.websockets:
                 self.websockets.remove(websocket)
-                logger.info("WebSocket disconnected (Total clients: %d)", len(self.websockets))
-                if not self.websockets:
-                    # Exit when last browser window is closed, IF enabled
-                    if self.exit_on_disconnect:
-                        logger.info("Last client disconnected, exiting...")
-                        # Manual cleanup before os._exit(0) because it skips atexit handlers
+            logger.info("WebSocket disconnected (Total clients: %d)", len(self.websockets))
+            if not self.websockets:
+                # Exit when last browser window is closed, IF enabled
+                if self.exit_on_disconnect:
+                    # Session-aware exit: only exit if NO other session has active websockets
+                    other_active = False
+                    if hasattr(self, "_webserver") and len(self._webserver.instances) > 1:
+                        for sid, inst in self._webserver.instances.items():
+                            if inst is not self and inst.websockets:
+                                other_active = True
+                                break
+                    
+                    if not other_active:
+                        logger.info("Last client of the last active session disconnected, exiting...")
                         if hasattr(self, "_browser_cleanup"):
                             self._browser_cleanup()
                         os._exit(0)
                     else:
-                        logger.info("Last client disconnected (server stays alive)")
+                        logger.info("Session disconnected, but other sessions are still active.")
+                else:
+                    logger.info("Last client disconnected (server stays alive)")
 
     def render_initial(self):
         # Initial render of the page (body)

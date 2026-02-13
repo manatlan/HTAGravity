@@ -118,6 +118,5 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("app")
     
-    p = App()
-    # WebApp(p).run()
-    ChromeApp(p, width=1024, height=768).run()
+    # WebApp(App).run()
+    ChromeApp(App, width=1024, height=768).run()
