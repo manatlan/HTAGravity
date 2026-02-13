@@ -3,8 +3,8 @@ import logging
 
 logger = logging.getLogger("htagravity")
 
-from .core import GTag, Tag, Input, prevent, stop
+from .core import GTag, Tag, prevent, stop
 from .server import App
 from .runners import BaseRunner, ChromeApp, WebApp
 
-__all__ = ["Tag", "Input", "App", "BaseRunner", "ChromeApp", "WebApp", "prevent", "stop"]
+__all__ = ["Tag", "App", "BaseRunner", "ChromeApp", "WebApp", "prevent", "stop"]

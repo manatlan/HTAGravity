@@ -1,5 +1,4 @@
-import pytest
-from htag.core import GTag, Tag, Input, prevent, stop
+from htag.core import GTag, Tag, prevent, stop
 
 def test_gtag_init():
     t = GTag("div", "hello")
@@ -81,13 +80,17 @@ def test_tag_creator():
     assert t.tag == "div"
     assert "Div" in Tag._registry
 
-def test_input_tag():
-    i = Input(_value="test")
+def test_void_elements():
+    # Test input (previously a special class)
+    i = Tag.Input(_value="test")
     assert i.tag == "input"
-    s = str(i)
-    assert "<input" in s
-    assert 'value="test"' in s
-    assert "/>" in s
+    assert str(i).startswith("<input")
+    assert "/>" in str(i)
+    
+    # Test other void elements
+    assert "/>" in str(Tag.Img(_src="foo.png"))
+    assert str(Tag.Br()).startswith("<br")
+    assert "/>" in str(Tag.Br())
 
 def test_decorators():
     @prevent

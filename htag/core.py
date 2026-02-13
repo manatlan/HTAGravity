@@ -1,20 +1,28 @@
-
 import html
 import uuid
 import json
 import threading
 import logging
+from typing import Any, List, Dict, Optional, Union, Callable, Set, Type
 
 logger = logging.getLogger("htagravity")
 
+VOID_ELEMENTS: Set[str] = {
+    "area", "base", "br", "col", "embed", "hr", "img", "input",
+    "link", "meta", "param", "source", "track", "wbr"
+}
+
 class GTag:
-    def _render_attrs(self):
+    tag: Optional[str] = None
+    id: str
+
+    def _render_attrs(self) -> str:
         """
         Renders the HTML attributes of the tag.
         Converts python-style underscores to hyphens (e.g., data_id becomes data-id).
         Always ensures an ID is present for client-side syncing.
         """
-        attrs_list = []
+        attrs_list: List[str] = []
         for k, v in self._attrs.items():
             # Convert python-style attributes (data_id -> data-id)
             attr_name = k.replace("_", "-")
@@ -25,19 +33,19 @@ class GTag:
         attrs += f' id="{self.id}"'
         return attrs
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """
         Initializes a GTag.
         - args: Child elements (strings or other GTags). The first arg is the tag name if self.tag is None.
         - kwargs: HTML attributes (prefixed with '_') or events (prefixed with 'on').
         """
         self._lock = threading.RLock()
-        self._childs = []
-        self._parent = None
-        self._attrs = {}
-        self._events = {}
+        self._childs: List[Union[str, 'GTag']] = []
+        self._parent: Optional['GTag'] = None
+        self._attrs: Dict[str, Any] = {}
+        self._events: Dict[str, Callable] = {}
         self._dirty = False
-        self._js_calls = []
+        self._js_calls: List[str] = []
 
         # If tag is not set by subclass (class attribute), take it from first arg
         if getattr(self, "tag", None) is None:
@@ -61,7 +69,7 @@ class GTag:
                 # Events like onclick=my_callback -> saved in self._events
                 self._events[k[2:]] = v
 
-    def add(self, *content):
+    def add(self, *content: Any) -> 'GTag':
         with self._lock:
             for item in content:
                 if item is None: continue
@@ -74,10 +82,10 @@ class GTag:
             self._dirty = True
         return self
 
-    def __iadd__(self, other):
+    def __iadd__(self, other: Any) -> 'GTag':
         return self.add(other)
 
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: Any) -> None:
         """
         Magic attribute handling:
         - Internal attributes are set normally.
@@ -102,41 +110,42 @@ class GTag:
             # Regular Python attribute
             super().__setattr__(name, value)
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         if name.startswith("_") and name[1:] in self._attrs:
             return self._attrs[name[1:]]
         return super().__getattribute__(name)
 
-    def __add__(self, other):
+    def __add__(self, other: Any) -> List[Any]:
         if isinstance(other, list):
             return [self] + other
         return [self, other]
 
-    def __radd__(self, other):
+    def __radd__(self, other: Any) -> List[Any]:
         if isinstance(other, list):
             return other + [self]
         return [other, self]
 
-    def remove(self, item):
+    def remove(self, item: Union[str, 'GTag']) -> 'GTag':
         with self._lock:
             if item in self._childs:
                 self._childs.remove(item)
-                item._parent = None
+                if isinstance(item, GTag):
+                    item._parent = None
                 self._dirty = True
         return self
 
-    def remove_self(self):
+    def remove_self(self) -> 'GTag':
         if self._parent:
             self._parent.remove(self)
         return self
 
-    def clear(self):
+    def clear(self) -> 'GTag':
         with self._lock:
             self._childs = []
             self._dirty = True
         return self
 
-    def add_class(self, name):
+    def add_class(self, name: str) -> 'GTag':
         with self._lock:
             classes = self._attrs.get("class", "").split()
             if name not in classes:
@@ -145,12 +154,16 @@ class GTag:
                 self._dirty = True
         return self
 
-    def call_js(self, script):
+    def call_js(self, script: str) -> 'GTag':
         self._js_calls.append(script)
         return self
 
-    def __str__(self):
+    def __str__(self) -> str:
         attrs = self._render_attrs()
+        
+        if self.tag in VOID_ELEMENTS:
+            return f"<{self.tag}{attrs}/>"
+            
         inner = "".join([str(child) for child in self._childs])
         
         if self.tag:
@@ -158,27 +171,21 @@ class GTag:
         else:
             return inner
 
-class Input(GTag):
-    def __init__(self, **kwargs):
-        super().__init__("input", **kwargs)
-    def __str__(self):
-         return f"<input{self._render_attrs()}/>"
-
-def prevent(func):
+def prevent(func: Callable) -> Callable:
     """Decorator to mark an event handler as needing preventDefault()"""
-    func._htag_prevent = True
+    setattr(func, "_htag_prevent", True)
     return func
 
-def stop(func):
+def stop(func: Callable) -> Callable:
     """Decorator to mark an event handler as needing stopPropagation()"""
-    func._htag_stop = True
+    setattr(func, "_htag_stop", True)
     return func
 
 class TagCreator:
     def __init__(self):
-        self._registry = {}
+        self._registry: Dict[str, Type[GTag]] = {}
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Type[GTag]:
         """
         Dynamically creates GTag subclasses on the fly.
         Allows using 'Tag.Div(...)', 'Tag.Button(...)', etc.
@@ -194,5 +201,4 @@ class TagCreator:
         return new_class
 
 Tag = TagCreator() # Singleton instance
-Tag._registry["Input"] = Input
 

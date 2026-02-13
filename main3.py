@@ -46,7 +46,7 @@ class SudokuLogic:
             puzzle[r][c] = 0
         return grid, puzzle
 
-class App(Tag.App):
+class Sudoku(Tag.App):
     statics = [
         Tag.link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"),
         Tag.style("""
@@ -207,4 +207,4 @@ class App(Tag.App):
                 self.render_board()
 
 if __name__ == "__main__":
-    ChromeApp(App, width=600, height=850).run()
+    ChromeApp(Sudoku, width=600, height=850).run()

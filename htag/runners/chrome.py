@@ -3,7 +3,12 @@ import subprocess
 import threading
 import logging
 import uvicorn
+import inspect
+from typing import Union, Type, TYPE_CHECKING, Optional, Callable
 from .base import BaseRunner
+
+if TYPE_CHECKING:
+    from ..server import App
 
 logger = logging.getLogger("htagravity")
 
@@ -12,15 +17,16 @@ class ChromeApp(BaseRunner):
     Executes an App in a Chrome/Chromium kiosk window.
     Features auto-cleanup of temporary browser profiles.
     """
-    def __init__(self, app: "App", kiosk=True, width=800, height=600):
+    def __init__(self, app: Union[Type["App"], "App"], kiosk: bool = True, width: int = 800, height: int = 600):
         super().__init__(app)
         self.kiosk = kiosk
         self.width = width
         self.height = height
+        self._cleanup_func: Optional[Callable[[], None]] = None
 
-    def run(self, host="127.0.0.1", port=8000):
+    def run(self, host: str = "127.0.0.1", port: int = 8000) -> None:
         if self.kiosk:
-            def launch():
+            def launch() -> None:
                 time.sleep(1)  # Give the server a second to start
                 
                 import tempfile
@@ -28,11 +34,11 @@ class ChromeApp(BaseRunner):
                 import atexit
                 tmp_dir = tempfile.mkdtemp(prefix="htagravity_")
                 
-                def cleanup():
+                def cleanup() -> None:
                     try:
                         shutil.rmtree(tmp_dir)
                         logger.info("Cleaned up temporary browser profile: %s", tmp_dir)
-                    except:
+                    except Exception:
                         pass
                 
                 atexit.register(cleanup)
@@ -68,8 +74,8 @@ class ChromeApp(BaseRunner):
 
         from ..server import WebServer
         # Use on_instance to attach cleanup if it's defined (kiosk mode only)
-        on_inst = None
-        if hasattr(self, "_cleanup_func"):
+        on_inst: Optional[Callable] = None
+        if self._cleanup_func:
             on_inst = lambda inst: setattr(inst, "_browser_cleanup", self._cleanup_func)
             
         ws = WebServer(self.app, on_instance=on_inst)

@@ -2,25 +2,34 @@ import asyncio
 import json
 import os
 import threading
+import uuid
+import inspect
+import logging
+from typing import Any, Dict, Optional, Union, List, Callable, Type, Set
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, Response, Cookie
 from fastapi.responses import HTMLResponse
-import logging
-import inspect
 from .core import GTag
 
 logger = logging.getLogger("htagravity")
 
 class Event:
-    def __init__(self, target, msg):
+    """
+    Simulates a DOM Event.
+    Attributes are dynamically populated from the client message.
+    """
+    def __init__(self, target: GTag, msg: Dict[str, Any]):
         self.target = target
-        self.id = msg.get("id")
-        self.name = msg.get("event")
-        self.data = msg.get("data", {})
-        # Flatten data for easy access
-        for k, v in self.data.items():
+        self.id: str = msg.get("id", "")
+        self.name: str = msg.get("event", "")
+        # Flat access to msg['data'] (e.g., e.value, e.x, etc.)
+        for k, v in msg.get("data", {}).items():
             setattr(self, k, v)
-    def __str__(self):
-        return f"Event({self.name}, {self.data}, target={self.target})"
+    
+    def __getattr__(self, name: str) -> Any:
+        return None
+
+    def __repr__(self) -> str:
+        return f"Event({self.name} on {self.target.tag})"
 
 CLIENT_JS = """
 // The client-side bridge that connects the browser to the Python server.
@@ -78,16 +87,20 @@ function htag_event(id, event_name, event) {
 # --- WebServer ---
 
 class WebServer:
-    def __init__(self, tag_entity, on_instance=None):
+    """
+    FastAPI implementation for hosting one or more App sessions.
+    Handles the HTTP initial render and the WebSocket communication.
+    """
+    def __init__(self, tag_entity: Union[Type['App'], 'App'], on_instance: Optional[Callable[['App'], None]] = None):
         import threading
         self._lock = threading.Lock()
         self.tag_entity = tag_entity # Class or Instance
         self.on_instance = on_instance # Optional callback(instance)
-        self.instances = {} # sid -> App instance
+        self.instances: Dict[str, 'App'] = {} # sid -> App instance
         self.app = FastAPI()
         self._setup_routes()
 
-    def _get_instance(self, sid):
+    def _get_instance(self, sid: str) -> 'App':
         if sid not in self.instances:
             with self._lock:
                 if sid not in self.instances:
@@ -95,22 +108,22 @@ class WebServer:
                         self.instances[sid] = self.tag_entity()
                         logger.info("Created new session instance for sid: %s", sid)
                     else:
-                        self.instances[sid] = self.tag_entity
+                        # tag_entity is an App instance
+                        self.instances[sid] = self.tag_entity # type: ignore
                         logger.info("Using shared instance for session sid: %s", sid)
                     
                     if self.on_instance:
                         self.on_instance(self.instances[sid])
                     
                     # Store a backlink to the webserver for session-aware logic
-                    self.instances[sid]._webserver = self
+                    setattr(self.instances[sid], "_webserver", self)
 
         return self.instances[sid]
 
-    def _setup_routes(self):
-        @self.app.get("/", response_class=HTMLResponse)
-        async def get(request: Request, response: Response, htag_sid: str = Cookie(None)):
+    def _setup_routes(self) -> None:
+        @self.app.get("/")
+        async def index(htag_sid: Optional[str] = Cookie(None)):
             if htag_sid is None:
-                import uuid
                 htag_sid = str(uuid.uuid4())
             
             instance = self._get_instance(htag_sid)
@@ -124,29 +137,39 @@ class WebServer:
 
         @self.app.websocket("/ws")
         async def websocket_endpoint(websocket: WebSocket):
-            htag_sid = websocket.cookies.get("htag_sid")
-            instance = self._get_instance(htag_sid)
-            await instance._handle_websocket(websocket)
+            htag_sid: Optional[str] = websocket.cookies.get("htag_sid")
+            if htag_sid:
+                instance = self._get_instance(htag_sid)
+                await instance._handle_websocket(websocket)
+            else:
+                await websocket.close()
 
 # --- App ---
 
 class App(GTag):
-    def __init__(self, *args, **kwargs):
+    """
+    The main application class for htagravity.
+    Handles HTML rendering, event dispatching, and WebSocket communication.
+    """
+    statics: List[GTag] = []
+
+    def __init__(self, *args: Any, **kwargs: Any):
         super().__init__("body", *args, **kwargs)
-        self.exit_on_disconnect = True # Default behavior
-        self.websockets = set()
-        self.sent_statics = set() # Track assets already in browser
+        self.exit_on_disconnect: bool = True # Default behavior
+        self.websockets: Set[WebSocket] = set()
+        self.sent_statics: Set[str] = set() # Track assets already in browser
 
     @property
-    def app(self):
+    def app(self) -> FastAPI:
         """Property for backward compatibility: returns a FastAPI instance hosting this App."""
         if not hasattr(self, "_app_host"):
             self._app_host = WebServer(self)
         return self._app_host.app
-    def _render_page(self):
+
+    def _render_page(self) -> str:
         # Collect ALL statics from the whole tree on first load
         self.sent_statics.clear()
-        all_statics = []
+        all_statics: List[str] = []
         self.collect_statics(self, all_statics)
         self.sent_statics.update(all_statics)
         statics_html = "".join(all_statics)
@@ -155,7 +178,7 @@ class App(GTag):
         <!DOCTYPE html>
         <html>
             <head>
-                <title>htagravity</title>
+                <title>{self.__class__.__name__}</title>
                 <script>{CLIENT_JS}</script>
                 {statics_html}
             </head>
@@ -165,7 +188,7 @@ class App(GTag):
         return html_content
 
 
-    async def _handle_websocket(self, websocket: WebSocket):
+    async def _handle_websocket(self, websocket: WebSocket) -> None:
         await websocket.accept()
         self.websockets.add(websocket)
         logger.info("New WebSocket connection (Total clients: %d)", len(self.websockets))
@@ -185,17 +208,21 @@ class App(GTag):
                 data = await websocket.receive_text()
                 msg = json.loads(data)
                 await self.handle_event(msg, websocket)
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, Exception):
+            pass
+        finally:
             if websocket in self.websockets:
-                self.websockets.remove(websocket)
+                self.websockets.discard(websocket)
             logger.info("WebSocket disconnected (Total clients: %d)", len(self.websockets))
+            
             if not self.websockets:
                 # Exit when last browser window is closed, IF enabled
                 if self.exit_on_disconnect:
                     # Session-aware exit: only exit if NO other session has active websockets
                     other_active = False
                     if hasattr(self, "_webserver") and len(self._webserver.instances) > 1:
-                        for sid, inst in self._webserver.instances.items():
+                        webserver: WebServer = getattr(self, "_webserver")
+                        for sid, inst in webserver.instances.items():
                             if inst is not self and inst.websockets:
                                 other_active = True
                                 break
@@ -210,11 +237,11 @@ class App(GTag):
                 else:
                     logger.info("Last client disconnected (server stays alive)")
 
-    def render_initial(self):
+    def render_initial(self) -> str:
         # Initial render of the page (body)
         return self.render_tag(self)
 
-    def collect_updates(self, tag, updates, js_calls):
+    def collect_updates(self, tag: GTag, updates: Dict[str, str], js_calls: List[str]) -> None:
         """
         Recursively traverses the tag tree to find 'dirty' tags that need re-rendering.
         Also collects pending JavaScript calls from tags.
@@ -233,7 +260,7 @@ class App(GTag):
                 js_calls.extend(tag._js_calls)
                 tag._js_calls = []
 
-    def collect_statics(self, tag, result):
+    def collect_statics(self, tag: GTag, result: List[str]) -> None:
         # Collect statics from class and instance
         s_instance = getattr(tag, "statics", [])
         s_class = getattr(tag.__class__, "statics", [])
@@ -250,10 +277,13 @@ class App(GTag):
             if isinstance(child, GTag):
                 self.collect_statics(child, result)
 
-    async def handle_event(self, msg, ws):
+    async def handle_event(self, msg: Dict[str, Any], ws: WebSocket) -> None:
         tag_id = msg.get("id")
         event_name = msg.get("event")
         
+        if not isinstance(tag_id, str):
+            return
+
         target_tag = self.find_tag(self, tag_id)
         if target_tag:
             callback_id = msg.get("data", {}).get("callback_id")
@@ -308,17 +338,17 @@ class App(GTag):
             # Final broadcast after callback finishes, including the result if any
             await self.broadcast_updates(result=res, callback_id=callback_id)
 
-    async def broadcast_updates(self, result=None, callback_id=None):
+    async def broadcast_updates(self, result: Any = None, callback_id: Optional[str] = None) -> None:
         """
         Collects all pending updates (tags, JS calls, statics) 
         and broadcasts them to all connected clients.
         Optional 'result' and 'callback_id' are used to resolve client-side Promises.
         """
-        updates = {}
-        js_calls = []
+        updates: Dict[str, str] = {}
+        js_calls: List[str] = []
         self.collect_updates(self, updates, js_calls)
         
-        all_statics = []
+        all_statics: List[str] = []
         self.collect_statics(self, all_statics)
         new_statics = [s for s in all_statics if s not in self.sent_statics]
         
@@ -339,22 +369,22 @@ class App(GTag):
                          list(updates.keys()), len(js_calls), result if callback_id else "n/a")
             
             payload = json.dumps(data)
-            dead = []
-            for client in self.websockets:
+            dead: List[WebSocket] = []
+            for client in list(self.websockets):
                 try:
                     await client.send_text(payload)
-                except:
+                except Exception:
                     dead.append(client)
             for client in dead:
-                self.websockets.remove(client)
+                self.websockets.discard(client)
 
-    def render_tag(self, tag):
+    def render_tag(self, tag: GTag) -> str:
         """
         Renders a GTag to its HTML string representation.
         Before rendering, it injects 'htag_event' calls into HTML event attributes,
         enabling the bridge between DOM events and Python callbacks.
         """
-        def process(t):
+        def process(t: GTag) -> None:
             if isinstance(t, GTag):
                 with t._lock:
                     # Auto-inject oninput for inputs if not already there, to support auto-binding
@@ -378,12 +408,13 @@ class App(GTag):
                         t._attrs[f"on{event_name}"] = f"{prefix}{js}{suffix}"
                     t._dirty = False # Clear dirty flag after rendering
                     for child in t._childs:
-                        process(child)
+                        if isinstance(child, GTag):
+                            process(child)
         
         process(tag)
         return str(tag)
 
-    def find_tag(self, root, tag_id):
+    def find_tag(self, root: GTag, tag_id: str) -> Optional[GTag]:
         if root.id == tag_id:
             return root
         for child in root._childs:
