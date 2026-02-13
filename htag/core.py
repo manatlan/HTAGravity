@@ -12,7 +12,7 @@ VOID_ELEMENTS: Set[str] = {
     "link", "meta", "param", "source", "track", "wbr"
 }
 
-class GTag:
+class GTag: # aka "Generic Tag"
     tag: Optional[str] = None
     id: str
 
