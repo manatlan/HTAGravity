@@ -195,9 +195,14 @@ class App(GTag):
         
         # Send initial state on connection/reconnection
         try:
+            updates = {self.id: self.render_initial()}
+            js = []
+            self.collect_updates(self, {}, js) # We only want the JS calls here
+            
             await websocket.send_text(json.dumps({
                 "action": "update",
-                "updates": {self.id: self.render_initial()}
+                "updates": updates,
+                "js": js
             }))
             logger.debug("Sent initial state to client")
         except Exception as e:
@@ -250,11 +255,13 @@ class App(GTag):
             if tag._dirty:
                 # This tag or one of its attributes changed, we re-render it entirely
                 updates[tag.id] = self.render_tag(tag)
-            else:
-                # If not dirty, check children
-                for child in tag._childs:
-                    if isinstance(child, GTag):
-                        self.collect_updates(child, updates, js_calls)
+            
+            # ALWAYS check children for JS calls (or deep updates if parent wasn't dirty)
+            for child in tag._childs:
+                if isinstance(child, GTag):
+                    # If the tag was already added to updates, we don't need its partial HTML,
+                    # but we ALWAYS need its JS calls.
+                    self.collect_updates(child, updates, js_calls)
             
             if tag._js_calls:
                 js_calls.extend(tag._js_calls)

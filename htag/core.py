@@ -18,7 +18,7 @@ class GTag:
 
     def _render_attrs(self) -> str:
         """
-        Renders the HTML attributes of the tag.
+        Renders the HTML attributes and events of the tag.
         Converts python-style underscores to hyphens (e.g., data_id becomes data-id).
         Always ensures an ID is present for client-side syncing.
         """
@@ -28,6 +28,20 @@ class GTag:
             attr_name = k.replace("_", "-")
             attrs_list.append(f'{attr_name}="{html.escape(str(v))}"')
         
+        for name, callback in self._events.items():
+            if isinstance(callback, str):
+                # Literal JS string
+                attrs_list.append(f'on{name}="{html.escape(callback)}"')
+            else:
+                # Python callback (wrapped in htag_event)
+                # We check for decorators like @prevent or @stop
+                js = f"htag_event('{self.id}', '{name}', event)"
+                if getattr(callback, "_htag_prevent", False):
+                    js = f"event.preventDefault(); {js}"
+                if getattr(callback, "_htag_stop", False):
+                    js = f"event.stopPropagation(); {js}"
+                attrs_list.append(f'on{name}="{js}"')
+
         attrs = " ".join(attrs_list)
         if attrs: attrs = " " + attrs
         attrs += f' id="{self.id}"'
@@ -101,8 +115,8 @@ class GTag:
             with self._lock:
                 self._attrs[attr_name] = value
                 self._dirty = True
-        elif name.startswith("on") and callable(value):
-            # Event (e.g., self.onclick = my_callback)
+        elif name.startswith("on") and (callable(value) or isinstance(value, str)):
+            # Event (e.g., self.onclick = my_callback or self.onclick = "alert(1)")
             with self._lock:
                 self._events[name[2:]] = value
                 self._dirty = True
