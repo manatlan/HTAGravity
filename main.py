@@ -3,7 +3,7 @@ import logging
 
 # logging.basicConfig(level=logging.INFO)
 
-class App(Tag.App):
+class MyApp(Tag.App):
     def __init__(self):
         super().__init__()
         b = Tag.button("add", onclick=self.onclick, oncontextmenu=self.onmenu, _style="color:green")
@@ -27,4 +27,4 @@ class App(Tag.App):
 
 if __name__ == "__main__":
     from htag import ChromeApp
-    ChromeApp(App).run()
+    ChromeApp(MyApp).run()

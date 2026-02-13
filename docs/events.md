@@ -29,7 +29,7 @@ The `e` argument passed to the callback is an `Event` object containing:
 When you use an `<input>`, `<textarea>`, or `<select>`, `htag` injects an `oninput` event that updates the component's `_value` attribute in real-time on the server.
 
 ```python
-class MyForm(App):
+class MyForm(Tag.App):
     def __init__(self):
         super().__init__()
         # No 'oninput' needed, it's automatic!

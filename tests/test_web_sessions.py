@@ -1,9 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
-from htag.server import App, WebServer
+from htag.server import WebServer
 from htag import Tag
 
-class MyApp(App):
+class MyApp(Tag.App):
     def __init__(self):
         super().__init__()
         self.count = 0

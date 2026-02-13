@@ -10,9 +10,9 @@ Take your `htag` applications to the next level with these powerful features.
 To enable multi-session isolation, you must pass the **App class** (not an instance) to your runner:
 
 ```python
-from htag import WebApp, App
+from htag import WebApp, Tag
 
-class MyMultiUserApp(App):
+class MyMultiUserApp(Tag.App):
     pass
 
 if __name__ == "__main__":

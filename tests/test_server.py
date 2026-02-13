@@ -2,8 +2,10 @@ import pytest
 import asyncio
 import json
 from unittest.mock import MagicMock, AsyncMock
-from htag.server import App, Event, WebServer
+from htag.server import Event, WebServer
 from htag import Tag
+
+App = Tag.App # Alias for tests
 
 def test_event_logic():
     target = MagicMock()

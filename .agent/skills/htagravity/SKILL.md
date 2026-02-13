@@ -23,8 +23,8 @@ class MyComponent(Tag.div):
         self += Tag.h1(f"Hello {name}")
 ```
 
-### 2. The Application (`App`)
-The root of your interface must be an `App` class (which inherits from `Tag.body`).
+### 2. The Application (`Tag.App`)
+The root of your interface must be a `Tag.App` class (which inherits from `Tag.body`).
 - Pass the **class** itself to runners to support multi-session isolation.
 
 ### 3. State & Reactivity
@@ -55,17 +55,17 @@ Use decorators to control event behavior:
 - `@stop`: Calls `event.stopPropagation()` on the client side.
 
 ### Forms & Inputs
-- Use the `Input` component for form fields.
+- Use the `Tag.input` component for form fields.
 - htagravity automatically binds the `value` attribute to the Python object for inputs.
 
 ## Multi-Session Deployment
 To ensure each user has their own isolated session/state:
-- **ALWAYS** pass the `App` class to the runner, NOT an instance.
+- **ALWAYS** pass the `Tag.App` class to the runner, NOT an instance.
 
 ```python
 if __name__ == "__main__":
     from htag import WebApp
-    WebApp(App).run() # Correct: unique instance per user
+    WebApp(MyApp).run() # Correct: unique instance per user
 ```
 
 ## Runner Choice

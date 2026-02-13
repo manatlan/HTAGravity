@@ -18,9 +18,9 @@
 Creating a basic `htag` app is simple:
 
 ```python
-from htag import Tag, WebApp, App
+from htag import Tag, WebApp
 
-class HelloApp(App):
+class HelloApp(Tag.App):
     def __init__(self):
         super().__init__()
         self += Tag.h1("Hello htag!")
@@ -42,7 +42,7 @@ pip install htagravity
 
 1.  **GTag**: The base class for all UI components.
 2.  **Tag**: A helper to dynamically create HTML elements (e.g., `Tag.div()`, `Tag.input()`).
-3.  **App**: A specialized `GTag` that acts as the root of your application and manages the server lifecycle.
+3.  **App**: A specialized `GTag` (accessed via `Tag.App`) that acts as the root of your application and manages the server lifecycle.
 4.  **Runners**: Classes like `WebApp` or `ChromeApp` that host and launch your application.
 
 ---

@@ -7,9 +7,9 @@ Runners are responsible for hosting your `App` and launching the interface.
 `WebApp` is the standard runner for web-based applications. It opens a new tab in your default browser.
 
 ```python
-from htag import WebApp, App
+from htag import WebApp, Tag
 
-class MyApp(App):
+class HelloApp(Tag.App):
     pass
 
 if __name__ == "__main__":
@@ -24,9 +24,9 @@ if __name__ == "__main__":
 `ChromeApp` launches your application as a standalone kiosk window using Google Chrome or Chromium.
 
 ```python
-from htag import ChromeApp, App
+from htag import ChromeApp, Tag
 
-class MyApp(App):
+class MyApp(Tag.App):
     pass
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ class MessageBox(Tag.div):
         box += Tag.p(message, _class="msgbox-text")
         box += Tag.button("OK", onclick=lambda e: self.remove_self(), _class="btn btn-primary btn-wide")
 
-class App(Tag.App):
+class MyApp(Tag.App):
     statics = [
         Tag.link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"),
         Tag.style("""
@@ -119,4 +119,4 @@ if __name__ == "__main__":
     logger = logging.getLogger("app")
     
     # WebApp(App).run()
-    ChromeApp(App, width=1024, height=768).run()
+    ChromeApp(MyApp, width=1024, height=768).run()
