@@ -133,10 +133,13 @@ class WebServer:
 
         @self.app.get("/favicon.ico")
         @self.app.get("/logo.png")
+        @self.app.get("/logo.jpg")
         async def favicon():
-            logo_path = os.path.join(os.getcwd(), "docs/assets/logo.png")
-            if os.path.exists(logo_path):
-                return FileResponse(logo_path)
+            # Try to find the logo with different common extensions
+            for ext in ["png", "jpg", "jpeg", "ico"]:
+                logo_path = os.path.join(os.getcwd(), f"docs/assets/logo.{ext}")
+                if os.path.exists(logo_path):
+                    return FileResponse(logo_path)
             return Response(status_code=204)
 
         @self.app.websocket("/ws")
@@ -183,7 +186,7 @@ class App(GTag):
         <html>
             <head>
                 <title>{self.__class__.__name__}</title>
-                <link rel="icon" type="image/png" href="/logo.png">
+                <link rel="icon" href="/logo.png">
                 <script>{CLIENT_JS}</script>
                 {statics_html}
             </head>

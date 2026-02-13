@@ -32,13 +32,6 @@ if __name__ == "__main__":
     WebApp(HelloApp).run()
 ```
 
-### Installation
-
-`htag` requires Python 3.7+ and standard networking dependencies (FastAPI, Uvicorn).
-
-```bash
-pip install htagravity
-```
 
 ### Core Concepts
 

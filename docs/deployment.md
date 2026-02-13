@@ -9,7 +9,7 @@ Every `Tag.App` in `htag` exposes an underlying **FastAPI** instance through its
 ### Basic Production Entrypoint
 
 ```python
-# main.py
+# app.py
 from htag import Tag
 
 class MyApp(Tag.App):
@@ -24,7 +24,7 @@ app = MyApp().app
 You can now run this with `uvicorn`:
 
 ```bash
-uvicorn main:app --host 0.0.0.0 --port 80
+uvicorn app:app --host 0.0.0.0 --port 80
 ```
 
 ## Embedding htag in existing FastAPI apps

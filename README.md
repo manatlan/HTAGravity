@@ -12,15 +12,9 @@ It's completly crazy, but it works (for the basics, on linux only, and with "chr
 
 [DOC](https://manatlan.github.io/HTAGravity/)
 
-## to test
+## Get Started
 
-Clone the repo, and inside the repo, type :
-```
-uv sync
-uv run main3.py
-```
-
-(the main3's app was created by antigravity too (sudoku game)... just incredible, working ootb)
+Check the [Official Documentation](https://manatlan.github.io/HTAGravity/) for more information.
 
 ## Antigravity resumes :
 
