@@ -1,29 +1,28 @@
 # Components
 
-Components are the building blocks of an `htag` application. Every visual element is a `GTag` or a subclass of it.
+Components are the building blocks of an `htag` application. Every visual element is a `Tag` or a subclass of it.
 
-## GTag
+## Tag.div
 
-`GTag` is the core class. It handles HTML rendering, state management, and lifecycle.
+`Tag.div` is the core class (the generic component). It handles HTML rendering, state management, and lifecycle.
 
 ### Creating a Component
 
-You can create a custom component by subclassing `GTag`:
+You can create a custom component by subclassing `Tag.div`:
 
 ```python
-from htag import GTag
+from htag import Tag
 
-class MyComponent(GTag):
+class MyComponent(Tag.div):
     def __init__(self, name):
         super().__init__()
-        self.tag = "div"  # Optional: default is "div"
         self._class = "my-class"
         self.add(f"Hello {name}!")
 ```
 
 ### Tree Manipulation
 
-- `self.add(*content)`: Adds children (strings or other GTags).
+- `self.add(*content)`: Adds children (strings or other components).
 - `self += content`: An elegant shorthand for `self.add(content)`.
 - `self.remove(child)`: Removes a child.
 - `self.clear()`: Removes all children.
