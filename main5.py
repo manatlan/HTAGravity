@@ -147,6 +147,105 @@ class Table(Tag.div):
             tbody += tr
         table += tbody
 
+class ProgressBar(Tag.div):
+    """A simple progress bar component."""
+    def __init__(self, progress=0, color="blue", **kwargs):
+        super().__init__(**kwargs)
+        self.progress = max(0, min(100, progress)) # Clamp between 0 and 100
+        self._class = "w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700"
+        
+        self.bar = Tag.div(_class=f"bg-{color}-600 h-2.5 rounded-full transition-all duration-300", _style=f"width: {self.progress}%")
+        self += self.bar
+        
+    def set_value(self, value):
+        self.progress = max(0, min(100, value))
+        self.bar._style = f"width: {self.progress}%"
+
+class CodeBlock(Tag.div):
+    """A styled container to display code snippets."""
+    def __init__(self, code, language="python", **kwargs):
+        super().__init__(**kwargs)
+        self._class = "rounded-md bg-slate-800 p-4 overflow-x-auto text-sm text-slate-50 font-mono shadow-inner border border-slate-700"
+        if "_class" in kwargs:
+             self._class += f" {kwargs['_class']}"
+             
+        pre = Tag.pre()
+        code_tag = Tag.code(code, _class=f"language-{language}")
+        pre += code_tag
+        self += pre
+
+class Spinner(Tag.div):
+    """A loading spinner component."""
+    def __init__(self, size="md", color="blue", **kwargs):
+        super().__init__(**kwargs)
+        
+        # Mapping sizes to Tailwind classes
+        sizes = {
+            "sm": "w-4 h-4 text-xs mt-1",
+            "md": "w-8 h-8",
+            "lg": "w-12 h-12"
+        }
+        sz_class = sizes.get(size, sizes["md"])
+        
+        # We start by making the container a flex center block if we want, or inline. 
+        # But we'll just style the spinner SVG directly.
+        
+        self._class = "flex justify-center items-center"
+        if "_class" in kwargs:
+             self._class += f" {kwargs['_class']}"
+             
+        # Create an animated SVG for the spinner
+        svg = Tag.svg(
+            Tag.circle(_class="opacity-25", _cx="12", _cy="12", _r="10", _stroke="currentColor", _stroke_width="4"),
+            Tag.path(_class="opacity-75", _fill="currentColor", _d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"),
+            _class=f"animate-spin {sz_class} text-{color}-600", _xmlns="http://www.w3.org/2000/svg", _fill="none", _viewBox="0 0 24 24"
+        )
+        self += svg
+
+class Accordion(Tag.div):
+    """A collapsible accordion item."""
+    def __init__(self, title, content, is_open=False, **kwargs):
+        super().__init__(**kwargs)
+        self.is_open = is_open
+        self._class = "border border-gray-200 rounded-lg mb-2 overflow-hidden"
+        
+        # Header / Button
+        self.header = Tag.button(_type="button", _onclick=self.toggle, _class="flex items-center justify-between w-full p-5 font-medium text-left text-gray-500 bg-gray-50 hover:bg-gray-100 transition-colors bg-white")
+        self.header += Tag.span(title)
+        
+        # Arrow SVG wrapper
+        self.arrow = Tag.svg(
+            Tag.path(_stroke="currentColor", _stroke_linecap="round", _stroke_linejoin="round", _stroke_width="2", _d="M9 5 5 1 1 5"),
+            _data_accordion_icon="", _class="w-3 h-3 rotate-180 shrink-0", _aria_hidden="true", _xmlns="http://www.w3.org/2000/svg", _fill="none", _viewBox="0 0 10 6"
+        )
+        
+        # Store a ref so we can rotate the arrow class later
+        self.arrow_wrapper = Tag.span(self.arrow, _class=f"transition-transform duration-200 {'rotate-180' if self.is_open else ''}")
+        self.header += self.arrow_wrapper
+        self += self.header
+        
+        # Body
+        self.body = Tag.div(_class="p-5 border-t border-gray-200")
+        
+        if isinstance(content, Tag.tag):
+            self.body += content
+        else:
+            self.body += Tag.p(str(content), _class="mb-2 text-gray-500")
+            
+        # Wrap body in a div that toggles display
+        self.body_wrapper = Tag.div(self.body, _class=f"{'' if self.is_open else 'hidden'}")
+        self += self.body_wrapper
+
+    def toggle(self, event):
+        self.is_open = not self.is_open
+        if self.is_open:
+             self.body_wrapper._class = ""
+             self.arrow_wrapper._class = "transition-transform duration-200 rotate-180"
+        else:
+             self.body_wrapper._class = "hidden"
+             self.arrow_wrapper._class = "transition-transform duration-200"
+
+
 class MessageBox(Tag.div):
     """A modal dialog component."""
     def __init__(self, title, message, on_close=None, type="info", **kwargs):
@@ -156,17 +255,25 @@ class MessageBox(Tag.div):
         # Type styling
         icon_bg = "bg-blue-100 text-blue-600"
         btn_class = "bg-blue-600 hover:bg-blue-700 focus:ring-blue-300"
-        icon_svg = '<svg aria-hidden="true" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>'
-        
         if type == "danger" or type == "error":
             icon_bg = "bg-red-100 text-red-600"
             btn_class = "bg-red-600 hover:bg-red-800 focus:ring-red-300"
-            icon_svg = '<svg aria-hidden="true" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path></svg>'
+            icon_svg = Tag.svg(
+                Tag.path(_fill_rule="evenodd", _d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z", _clip_rule="evenodd"),
+                _aria_hidden="true", _class="w-6 h-6", _fill="currentColor", _viewBox="0 0 20 20", _xmlns="http://www.w3.org/2000/svg"
+            )
         elif type == "success":
             icon_bg = "bg-green-100 text-green-600"
             btn_class = "bg-green-600 hover:bg-green-800 focus:ring-green-300"
-            icon_svg = '<svg aria-hidden="true" class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path></svg>'
-            
+            icon_svg = Tag.svg(
+                Tag.path(_fill_rule="evenodd", _d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z", _clip_rule="evenodd"),
+                _aria_hidden="true", _class="w-6 h-6", _fill="currentColor", _viewBox="0 0 20 20", _xmlns="http://www.w3.org/2000/svg"
+            )
+        else:
+            icon_svg = Tag.svg(
+                Tag.path(_fill_rule="evenodd", _d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z", _clip_rule="evenodd"),
+                _aria_hidden="true", _class="w-6 h-6", _fill="currentColor", _viewBox="0 0 20 20", _xmlns="http://www.w3.org/2000/svg"
+            )
         # Modal backdrop (fixed full screen, gray overlay with opacity, flex centering)
         # We start hidden: display: none
         self._class = "fixed inset-0 z-50 flex items-center justify-center overflow-x-hidden overflow-y-auto outline-none focus:outline-none bg-gray-900 bg-opacity-50 transition-opacity"
@@ -187,7 +294,7 @@ class MessageBox(Tag.div):
         
         # Body (Icon + Text)
         body = Tag.div(_class="p-6 text-center")
-        icon_container = Tag.div(Tag.HTML(icon_svg), _class=f"mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full {icon_bg}")
+        icon_container = Tag.div(icon_svg, _class=f"mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full {icon_bg}")
         body += icon_container
         body += Tag.h3(title, _class="mb-2 text-lg font-normal text-gray-500")
         body += Tag.p(message, _class="text-sm text-gray-500 mb-6")
@@ -197,18 +304,6 @@ class MessageBox(Tag.div):
         body += ok_btn
         
         content += body
-
-    def render_tag(self, tag):
-        # We must support Tag.HTML for raw SVG strings
-        class HTMLTag(Tag.span):
-            def __init__(self, raw_html):
-                super().__init__()
-                self.raw_html = raw_html
-            def __str__(self):
-                return self.raw_html
-        if not hasattr(Tag, "HTML"):
-             Tag.HTML = HTMLTag
-        return super().render_tag(tag)
         
     def open_modal(self, event=None):
         self._style = "display: flex;"
@@ -327,6 +422,65 @@ class DemoApp(Tag.App):
         container += self.info_modal
         container += self.danger_modal
 
+        # --- Card 6: Utils (Progress & Code) ---
+        utils_card = Card(title="Utilities & Feedback", _class="md:col-span-2")
+        utils_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
+        
+        # Progress section
+        prog_section = Tag.div()
+        prog_section += Tag.h3("Task Progress", _class="text-sm font-semibold text-gray-700 mb-2")
+        self.prog_bar = ProgressBar(progress=30, color="blue")
+        prog_section += self.prog_bar
+        
+        prog_btns = Tag.div(_class="flex gap-2 mt-4")
+        prog_btns += Button("+10%", "secondary", _onclick=self.increase_progress)
+        prog_btns += Button("Reset", "danger", _class="ml-auto", _onclick=self.reset_progress)
+        prog_section += prog_btns
+        utils_layout += prog_section
+        
+        # Code block section
+        code_section = Tag.div()
+        code_section += Tag.h3("Code Snippet", _class="text-sm font-semibold text-gray-700 mb-2")
+        code_section += CodeBlock('def hello_world():\n    print("Hello from HTAGravity!")', language="python")
+        utils_layout += code_section
+        
+        utils_card.add(utils_layout)
+        grid += utils_card
+
+        # --- Card 7: Advanced / Extras ---
+        extra_card = Card(title="Advanced Components", _class="md:col-span-2")
+        extra_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
+        
+        # Accordion demo
+        acc_section = Tag.div()
+        acc_section += Tag.h3("Accordions / Expansion Panels", _class="text-sm font-semibold text-gray-700 mb-4")
+        acc_section += Accordion("What is HTAGravity?", "HTAGravity is a lightweight, pure Python framework for building modern web applications without writing JavaScript.", is_open=True)
+        acc_section += Accordion("Why use Tailwind CSS?", "Tailwind allows you to rapidly build custom user interfaces by composing utility classes directly in your markup, keeping CSS files small.")
+        extra_layout += acc_section
+        
+        # Spinner / Loading demo
+        spin_section = Tag.div()
+        spin_section += Tag.h3("Loading States", _class="text-sm font-semibold text-gray-700 mb-4")
+        
+        spin_flex = Tag.div(_class="flex items-center gap-6 p-4 rounded-lg border border-dashed border-gray-300 bg-gray-50")
+        spin_flex += Tag.div(Spinner("sm", "red"), Tag.span("Small", _class="text-xs text-gray-500 mt-2 block text-center"))
+        spin_flex += Tag.div(Spinner("md", "blue"), Tag.span("Medium", _class="text-xs text-gray-500 mt-2 block text-center"))
+        spin_flex += Tag.div(Spinner("lg", "green"), Tag.span("Large", _class="text-xs text-gray-500 mt-2 block text-center"))
+        
+        spin_section += spin_flex
+        
+        # Button with loader
+        btn_loader = Button("Save Changes", variant="primary", _class="mt-4 flex items-center justify-center gap-2", _onclick=self.fake_loading)
+        # Add a placeholder for a small spinner
+        self.btn_spinner_area = Tag.span("")
+        btn_loader += self.btn_spinner_area
+        spin_section += btn_loader
+        
+        extra_layout += spin_section
+        
+        extra_card.add(extra_layout)
+        grid += extra_card
+
     # --- Actions (Event Handlers) ---
     def on_type(self, event):
         # We read the value either from event context or directly from the synced input component
@@ -361,6 +515,12 @@ class DemoApp(Tag.App):
     def reset(self, event):
         self.counter = 0
         self.update_display()
+        
+    def increase_progress(self, event):
+        self.prog_bar.set_value(self.prog_bar.progress + 10)
+        
+    def reset_progress(self, event):
+        self.prog_bar.set_value(0)
 
     def update_display(self):
         self.counter_display.clear()
@@ -371,6 +531,24 @@ class DemoApp(Tag.App):
             self.counter_display._class = "text-5xl font-bold text-center text-green-600 mb-6"
         else:
              self.counter_display._class = "text-5xl font-bold text-center text-blue-600 mb-6"
+             
+    import asyncio
+    async def fake_loading(self, event):
+        # We start the loader
+        btn = event.target
+        self.btn_spinner_area.clear()
+        self.btn_spinner_area += Spinner("sm", "white")
+        btn.call_js("this.disabled = true;")
+        
+        # Simulate network request
+        await self.asyncio.sleep(2)
+        
+        # Reset
+        self.btn_spinner_area.clear()
+        btn.call_js("this.disabled = false;")
+        self.alert_area.clear()
+        self.alert_area += Alert("Saved successfully!", variant="success")
+
 
 if __name__ == "__main__":
     ChromeApp(DemoApp, width=1024, height=768).run()

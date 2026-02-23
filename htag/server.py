@@ -242,6 +242,14 @@ class App(GTag):
             if not self.websockets:
                 # Exit when last browser window is closed, IF enabled
                 if self.exit_on_disconnect:
+                    # Give it a small delay in case of F5 / Page Refresh
+                    await asyncio.sleep(0.5)
+                    
+                    # Check again if a client reconnected during the delay
+                    if self.websockets:
+                        logger.info("Client reconnected quickly, aborting exit (likely F5)")
+                        return
+                        
                     # Session-aware exit: only exit if NO other session has active websockets
                     other_active = False
                     if hasattr(self, "_webserver") and len(self._webserver.instances) > 1:
