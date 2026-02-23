@@ -45,7 +45,7 @@ class ChromeApp(BaseRunner):
                 # Cleanup logic will be attached to instances via on_instance callback
                 self._cleanup_func = cleanup
                 
-                browsers = ["google-chrome", "chromium-browser", "chromium", "chrome"]
+                browsers = ["google-chrome-stable", "google-chrome", "chromium-browser", "chromium", "chrome", "microsoft-edge", "brave-browser"]
                 found = False
                 
                 for browser in browsers:
@@ -68,7 +68,12 @@ class ChromeApp(BaseRunner):
                         continue
                 
                 if not found:
-                    logger.warning("Could not launch any browser (tried: %s)", ", ".join(browsers))
+                    logger.warning("Could not launch any Chromium-based browser (tried: %s)", ", ".join(browsers))
+                    import webbrowser
+                    if webbrowser.open(f"http://{host}:{port}"):
+                        logger.info("Fallback: opened default browser")
+                    else:
+                        logger.error("Fatal: Could not open any browser at all")
 
             threading.Thread(target=launch, daemon=True).start()
 
