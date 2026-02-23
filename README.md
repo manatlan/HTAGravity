@@ -18,4 +18,8 @@ Check the [Official Documentation](https://manatlan.github.io/HTAGravity/) for m
 
 ## Antigravity resumes :
 
-HTAGravity is a Python library for building web applications using HTML, CSS, and JavaScript. It is a fork of the HTAG library, which is a Python library for building web applications using HTML, CSS, and JavaScript. HTAGravity is designed to be a more complete and feature-rich alternative to HTAG.
+HTAGravity is a Python library for building web applications using HTML, CSS, and JavaScript. It is a fork of the HTAG library, designed to be a more complete and feature-rich alternative.
+
+### Key Resiliency Features Added
+*   **F5/Reload Robustness**: Refreshing the browser no longer kills the Python backend; the session reconstructs cleanly.
+*   **HTTP Fallback (SSE + POST)**: If WebSockets are blocked (e.g. strict proxies) or fail to connect, the client seamlessly falls back to HTTP POST for events and Server-Sent Events (SSE) for receiving UI updates.

@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from htag import Tag, ChromeApp
 
 logging.basicConfig(level=logging.INFO)
@@ -532,7 +533,6 @@ class DemoApp(Tag.App):
         else:
              self.counter_display._class = "text-5xl font-bold text-center text-blue-600 mb-6"
              
-    import asyncio
     async def fake_loading(self, event):
         # We start the loader
         btn = event.target
@@ -540,8 +540,10 @@ class DemoApp(Tag.App):
         self.btn_spinner_area += Spinner("sm", "white")
         btn.call_js("this.disabled = true;")
         
+        yield # Force UI update to show the spinner
+        
         # Simulate network request
-        await self.asyncio.sleep(2)
+        await asyncio.sleep(2)
         
         # Reset
         self.btn_spinner_area.clear()

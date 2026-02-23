@@ -9,10 +9,10 @@ Use this skill to design, implement, and refine web applications using the **hta
 
 ## Core Architecture
 
-### 1. Components (`GTag`)
-Every UI element in htagravity is a component inheriting from `GTag`.
+### 1. Components (`Tag`)
+Every UI element in htagravity is a component created via `Tag`.
 - Use the `Tag` factory for standard HTML elements (e.g., `Tag.div`, `Tag.button`).
-- Create custom components by subclassing `GTag` or any `Tag.*` class.
+- Create custom components by subclassing any `Tag.*` class.
 
 ```python
 from htag import Tag
@@ -51,6 +51,11 @@ htagravity uses a "dirty-marking" system for UI updates.
 htagravity automatically binds input events to Python.
 - For text/number inputs, the current value is accessed safely via event handlers: `val = event.value`
 - For checkboxes/toggles, the framework synchronizes the boolean state. Access it safely using `getattr(self.checkbox, "_value", False)`. Do not use `.value` directly on a checkbox component as it will raise an `AttributeError`.
+
+### 5. Resiliency & Fallback
+The `htag/server.py` implementation is fully robust against network irregularities:
+- **WebSocket to HTTP Fallback**: If a WebSocket drops or fails to connect, the Javascript bridge automatically falls back to utilizing standard HTTP POST requests (`/event`) and Server-Sent Events (`/stream`).
+- **Graceful Reconnections**: A user pressing F5 will not kill the server thread. The server only exits when the browser tab is explicitly closed or navigates away cleanly without returning within the 1-second reconnect window.
 
 ## Best Practices
 

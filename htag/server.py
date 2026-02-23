@@ -566,21 +566,6 @@ class App(GTag):
                     if t.tag in ["input", "textarea", "select"] and "input" not in t._events:
                         t._attrs["oninput"] = f"htag_event('{t.id}', 'input', event)"
 
-                    # Convert registered python callbacks into htag_event(...) JS calls in HTML attributes
-                    for event_name, callback in t._events.items():
-                        js = f"htag_event('{t.id}', '{event_name}', event)"
-                        
-                        # Detect modifiers from decorators
-                        prefix = ""
-                        suffix = ""
-                        if hasattr(callback, "_htag_prevent"):
-                            prefix = "event.preventDefault();"
-                            suffix = "; return false;"
-                        if hasattr(callback, "_htag_stop"):
-                            prefix += "event.stopPropagation();"
-                            
-                        # Overwrite or set the attribute
-                        t._attrs[f"on{event_name}"] = f"{prefix}{js}{suffix}"
                     t._dirty = False # Clear dirty flag after rendering
                     for child in t._childs:
                         if isinstance(child, GTag):

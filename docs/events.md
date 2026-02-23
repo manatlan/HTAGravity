@@ -4,7 +4,7 @@
 
 ## Event Handlers
 
-You can attach event handlers to any `GTag` using the `_on{event}` syntax:
+You can attach event handlers to any `Tag` component using the `_on{event}` syntax:
 
 ```python
 def my_callback(e):
@@ -18,7 +18,7 @@ btn = Tag.button("Click me", _onclick=my_callback)
 
 The `e` argument passed to the callback is an `Event` object containing:
 
-- `e.target`: The `GTag` instance that triggered the event.
+- `e.target`: The `Tag` instance that triggered the event.
 - `e.name`: The name of the event (e.g., "click").
 - Data attributes like `e.value` (for inputs), `e.x`, `e.y` (for mouse events), etc.
 
@@ -85,7 +85,7 @@ def handle_submit(e):
 You can execute arbitrary JavaScript from the server using `call_js()`:
 
 ```python
-class MyTag(GTag):
+class MyTag(Tag.div):
     def boom(self, e):
         self.call_js("alert('BOOM!')")
 ```

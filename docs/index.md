@@ -8,7 +8,7 @@
 
 ## Features
 
-- **Component-Based**: Build complex UIs using reusable `GTag` components.
+- **Component-Based**: Build complex UIs using reusable components via `Tag`.
 - **Pythonic**: All UI logic and state management are written in pure Python.
 - **Real-time**: Automatic synchronization of UI changes via WebSockets.
 - **Responsive**: Built-in support for multiple runners (Browser, Chrome App).
@@ -35,10 +35,9 @@ if __name__ == "__main__":
 
 ### Core Concepts
 
-1.  **GTag**: The base class for all UI components.
-2.  **Tag**: A helper to dynamically create HTML elements (e.g., `Tag.div()`, `Tag.input()`).
-3.  **App**: A specialized `GTag` (accessed via `Tag.App`) that acts as the root of your application and manages the server lifecycle.
-4.  **Runners**: Classes like `WebApp` or `ChromeApp` that host and launch your application.
+1.  **Tag**: The helper class to dynamically create UI components (e.g., `Tag.div()`, `Tag.input()`).
+2.  **App**: A specialized tag (accessed via `Tag.App`) that acts as the root of your application and manages the server lifecycle.
+3.  **Runners**: Classes like `WebApp` or `ChromeApp` that host and launch your application.
 
 ---
 
