@@ -56,7 +56,7 @@ def test_gtag_attr_magic():
     
     # Test line 96: event setter
     def other_h(e): pass
-    t.onmouseover = other_h
+    t._onmouseover = other_h
     assert "mouseover" in t._events
 
 def test_gtag_render_attrs():
@@ -68,7 +68,7 @@ def test_gtag_render_attrs():
 
 def test_gtag_events():
     def my_handler(e): pass
-    t = GTag("button", onclick=my_handler)
+    t = GTag("button", _onclick=my_handler)
     assert "click" in t._events
     assert t._events["click"] == my_handler
 

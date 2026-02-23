@@ -72,7 +72,7 @@ async def test_app_handle_event_sync():
         shared["done"] = True
         return "result"
     
-    btn = Tag.button(onclick=my_cb)
+    btn = Tag.button(_onclick=my_cb)
     app += btn
     
     ws = AsyncMock()
@@ -98,7 +98,7 @@ async def test_app_handle_event_async():
         await asyncio.sleep(0.01)
         shared["done"] = True
     
-    btn = Tag.button(onclick=my_cb)
+    btn = Tag.button(_onclick=my_cb)
     app += btn
     
     ws = AsyncMock()
@@ -118,7 +118,7 @@ async def test_app_handle_event_generator():
         app.call_js("3")
         return "final"
     
-    btn = Tag.button(onclick=my_gen)
+    btn = Tag.button(_onclick=my_gen)
     app += btn
     
     ws = AsyncMock()
@@ -140,7 +140,7 @@ async def test_app_handle_event_error():
     def fail(e):
         raise ValueError("boom")
     
-    btn = Tag.button(onclick=fail)
+    btn = Tag.button(_onclick=fail)
     app += btn
     
     ws = AsyncMock()
@@ -205,7 +205,7 @@ async def test_app_handle_event_async_generator():
         app.call_js("b")
         yield
         
-    btn = Tag.button(onclick=my_agen)
+    btn = Tag.button(_onclick=my_agen)
     app += btn
     
     ws = AsyncMock()
@@ -221,7 +221,7 @@ async def test_app_handle_event_gtag_result():
     def my_cb(e):
         return e.target # Returns a GTag
         
-    btn = Tag.button(onclick=my_cb)
+    btn = Tag.button(_onclick=my_cb)
     app += btn
     
     ws = AsyncMock()
@@ -247,7 +247,7 @@ def test_render_tag_special_cases():
     @stop
     def my_cb(e): pass
     
-    btn = Tag.button("ok", onclick=my_cb)
+    btn = Tag.button("ok", _onclick=my_cb)
     html = app.render_tag(btn)
     assert "event.preventDefault()" in html
     assert "event.stopPropagation()" in html
