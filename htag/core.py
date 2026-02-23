@@ -69,7 +69,7 @@ class GTag: # aka "Generic Tag"
             else:
                 self.tag = "div" # fallback
 
-        self.id = str(uuid.uuid4())
+        self.id = f"{self.tag}-{id(self)}"
         logger.debug("Created Tag: %s (id: %s)", self.tag, self.id)
 
         for arg in args:
@@ -156,6 +156,15 @@ class GTag: # aka "Generic Tag"
             self._parent.remove(self)
         return self
 
+    @property
+    def root(self) -> Optional['GTag']:
+        current = self
+        while current is not None:
+            if isinstance(current, Tag.App):
+                return current
+            current = current._parent
+        return None
+
     def clear(self) -> 'GTag':
         with self._lock:
             self._childs = []
@@ -167,6 +176,15 @@ class GTag: # aka "Generic Tag"
             classes = self._attrs.get("class", "").split()
             if name not in classes:
                 classes.append(name)
+                self._attrs["class"] = " ".join(classes)
+                self._dirty = True
+        return self
+
+    def remove_class(self, name: str) -> 'GTag':
+        with self._lock:
+            classes = self._attrs.get("class", "").split()
+            if name in classes:
+                classes.remove(name)
                 self._attrs["class"] = " ".join(classes)
                 self._dirty = True
         return self

@@ -169,3 +169,25 @@ def test_gtag_le():
     t <= child
     assert child in t._childs
     assert child._parent == t
+
+def test_gtag_root():
+    class MyApp(Tag.App):
+        pass
+
+    app = MyApp()
+    child1 = Tag.Div()
+    child2 = Tag.Span()
+    
+    app += child1
+    child1 += child2
+
+    assert app.root is app
+    assert child1.root is app
+    assert child2.root is app
+
+    # Not attached to an App
+    unattached = Tag.Div()
+    unattached_child = Tag.Span()
+    unattached += unattached_child
+    assert unattached.root is None
+    assert unattached_child.root is None
