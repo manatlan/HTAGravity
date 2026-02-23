@@ -68,6 +68,8 @@ class Alert(Tag.div):
             self._class = "p-4 mb-4 text-sm text-green-800 rounded-lg bg-green-50 border border-green-200"
         elif variant == "warning":
             self._class = "p-4 mb-4 text-sm text-yellow-800 rounded-lg bg-yellow-50 border border-yellow-200"
+        elif variant == "error":
+            self._class = "p-4 mb-4 text-sm text-red-800 rounded-lg bg-red-50 border border-red-200"
             
         if "_class" in kwargs:
             self._class += f" {kwargs['_class']}"
@@ -314,6 +316,93 @@ class MessageBox(Tag.div):
         if self.on_close:
             self.on_close()
 
+class Tabs(Tag.div):
+    """A tabbed layout component."""
+    def __init__(self, tabs_dict, **kwargs):
+        super().__init__(**kwargs)
+        self._class = "w-full"
+        self.tabs_dict = tabs_dict
+        self.active_tab = list(tabs_dict.keys())[0] if tabs_dict else None
+        self.render_tabs()
+
+    def render_tabs(self):
+        self.clear()
+        
+        # Header sequence
+        header = Tag.ul(_class="flex flex-wrap text-sm font-medium text-center text-gray-500 border-b border-gray-200")
+        for title in self.tabs_dict.keys():
+            is_active = (title == self.active_tab)
+            li = Tag.li(_class="mr-2")
+            
+            # Closure block for the click handler
+            def make_handler(t):
+                return lambda e: self.select_tab(t)
+                
+            a_class = "inline-block p-4 text-blue-600 bg-blue-50 rounded-t-lg active font-semibold" if is_active else "inline-block p-4 rounded-t-lg hover:text-gray-600 hover:bg-gray-50 cursor-pointer"
+            
+            li += Tag.a(title, _class=a_class, _onclick=make_handler(title))
+            header += li
+        self += header
+        
+        # Body panel
+        if self.active_tab:
+            body = Tag.div(_class="p-6 bg-white rounded-b-lg border border-t-0 border-gray-200")
+            content = self.tabs_dict[self.active_tab]
+            
+            # Allow strings or Tag instances
+            if hasattr(content, "tag"):
+                body += content
+            else:
+                body += Tag.p(str(content), _class="text-gray-600")
+            self += body
+
+    def select_tab(self, title):
+        self.active_tab = title
+        self.render_tabs()
+
+class Dropdown(Tag.div):
+    """A floating dropdown menu component."""
+    def __init__(self, title, items, **kwargs):
+        super().__init__(**kwargs)
+        self._class = "relative inline-block text-left"
+        if "_class" in kwargs: self._class += f" {kwargs['_class']}"
+        self.is_open = False
+        self.items = items
+        
+        # Button
+        self.btn = Button(title, variant="secondary", _onclick=self.toggle)
+        self.btn += Tag.svg(Tag.path(_stroke="currentColor", _stroke_linecap="round", _stroke_linejoin="round", _stroke_width="2", _d="m1 1 4 4 4-4"), _class="w-2.5 h-2.5 ml-2.5 inline", _aria_hidden="true", _xmlns="http://www.w3.org/2000/svg", _fill="none", _viewBox="0 0 10 6")
+        self += self.btn
+        
+        # Menu panel
+        self.menu = Tag.div(_class="absolute left-0 z-10 mt-2 w-44 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 transition-all duration-200")
+        self += self.menu
+        self.update_menu()
+
+    def toggle(self, e):
+        self.is_open = not self.is_open
+        self.update_menu()
+
+    def update_menu(self):
+        self.menu.clear()
+        if self.is_open:
+            self.menu._class = "absolute left-0 z-10 mt-2 w-44 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 opacity-100 scale-100"
+            py_items = Tag.div(_class="py-1")
+            for label, callback in self.items:
+                def make_cb(cb):
+                    def handler(e):
+                        self.is_open = False
+                        self.update_menu()
+                        if cb: return cb(e)
+                    return handler
+                
+                # We use a pure div button-like structure so it doesn't navigate
+                py_items += Tag.div(label, _class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer", _onclick=make_cb(callback))
+            self.menu += py_items
+        else:
+            self.menu._class = "absolute left-0 z-10 mt-2 w-44 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 opacity-0 scale-95 pointer-events-none"
+
+
 # ====================================================================
 # APP : Main Application Flow
 # ====================================================================
@@ -481,8 +570,60 @@ class DemoApp(Tag.App):
         
         extra_card.add(extra_layout)
         grid += extra_card
+        
+        # --- Card 8: Tabs & Dropdowns (Newly Added!) ---
+        new_card = Card(title="Navigation & Menus", _class="md:col-span-2 border-t-4 border-t-teal-500")
+        new_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
+        
+        # Tabs
+        tab_section = Tag.div()
+        tab_section += Tag.h3("Tabs Panel", _class="text-sm font-semibold text-gray-700 mb-4")
+        
+        tab_content1 = Tag.div(Tag.h4("Profil Utilisateur", _class="font-bold mb-2"), Tag.p("Gérez vos informations personnelles ici. Les tabs permettent de diviser les vues sans tout recharger.", _class="text-sm text-gray-600"))
+        tab_content2 = Tag.div(Tag.h4("Sécurité", _class="font-bold mb-2"), Tag.p("Paramètres de mot de passe et 2FA.", _class="text-sm text-gray-600"))
+        
+        tabs = Tabs({
+            "Profil": tab_content1,
+            "Sécurité": tab_content2,
+            "Notifications": "Aucune nouvelle notification pour le moment."
+        })
+        tab_section += tabs
+        new_layout += tab_section
+        
+        # Dropdown & Toasts
+        action_section = Tag.div()
+        action_section += Tag.h3("Menus & Toasts", _class="text-sm font-semibold text-gray-700 mb-4")
+        
+        # The toaster anchor
+        self.toaster = Tag.div(_class="fixed bottom-5 right-5 z-50 flex flex-col gap-2")
+        container += self.toaster # add to main layout
+        
+        dropdown_items = [
+            ("Déclencher un Toast Succès", lambda e: self.fire_toast("Opération réussie !", "success")),
+            ("Déclencher une Alerte", lambda e: self.fire_toast("Ceci est une erreur importante", "error")),
+            ("Option inerte", None)
+        ]
+        
+        action_section += Dropdown("Actions Rapides", dropdown_items)
+        action_section += Tag.p("Cliquez sur le dropdown pour déclencher un toast éphémère. Il disparaîtra tout seul après 3 secondes gràce à asyncio !", _class="mt-4 text-xs text-gray-500")
+        
+        new_layout += action_section
+        new_card.add(new_layout)
+        grid += new_card
 
     # --- Actions (Event Handlers) ---
+    async def fire_toast(self, message, variant="success"):
+        # Create a tiny toast
+        toast = Alert(message, variant=variant, _class="shadow-xl transform transition-all duration-300 translate-y-0 opacity-100")
+        self.toaster += toast
+        yield
+        
+        await asyncio.sleep(3)
+        toast._class = "shadow-xl transform transition-all duration-300 translate-y-2 opacity-0"
+        yield
+        
+        await asyncio.sleep(0.3)
+        toast.remove_self()
     def on_type(self, event):
         # We read the value either from event context or directly from the synced input component
         val = event.value

@@ -324,7 +324,7 @@ class App(GTag):
         finally:
             self.sse_queues.discard(queue)
             logger.info("SSE disconnected (Total clients: %d)", len(self.sse_queues))
-            await self._handle_disconnect()
+            asyncio.create_task(self._handle_disconnect())
 
     async def _handle_websocket(self, websocket: WebSocket) -> None:
         await websocket.accept()
@@ -357,7 +357,7 @@ class App(GTag):
             if websocket in self.websockets:
                 self.websockets.discard(websocket)
             logger.info("WebSocket disconnected (Total WS clients: %d)", len(self.websockets))
-            await self._handle_disconnect()
+            asyncio.create_task(self._handle_disconnect())
 
     async def _handle_disconnect(self) -> None:
         """Centralized disconnect handler to manage graceful shutdown across WS and SSE"""

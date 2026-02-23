@@ -259,15 +259,20 @@ async def test_handle_websocket_lifecycle():
     app = App()
     
     # 1. Success case + exit
+    import asyncio
+    from unittest.mock import patch
+    real_sleep = asyncio.sleep
+    async def fast_sleep(x): await real_sleep(0)
+    
     ws = AsyncMock()
     ws.receive_text.side_effect = [
         json.dumps({"id": app.id, "event": "click", "data": {}}),
         WebSocketDisconnect()
     ]
-    with MagicMock() as mock_exit:
-        import htag.server
-        htag.server.os._exit = mock_exit
+    with patch("htag.server.os._exit") as mock_exit, \
+         patch("htag.server.asyncio.sleep", side_effect=fast_sleep):
         await app._handle_websocket(ws)
+        await real_sleep(0.1) # Yield to background tasks
         assert mock_exit.called
 
     # 2. Multi-session case (one active session prevents exit)
@@ -280,9 +285,10 @@ async def test_handle_websocket_lifecycle():
     server.instances = {"sid1": app, "sid2": app2}
     app._webserver = server
     
-    with MagicMock() as mock_exit:
-        htag.server.os._exit = mock_exit
+    with patch("htag.server.os._exit") as mock_exit, \
+         patch("htag.server.asyncio.sleep", side_effect=fast_sleep):
         await app._handle_websocket(ws2)
+        await real_sleep(0.1)
         assert not mock_exit.called
 
     # 3. Browser cleanup case
@@ -290,9 +296,10 @@ async def test_handle_websocket_lifecycle():
     ws3.receive_text.side_effect = WebSocketDisconnect()
     app3 = App()
     app3._browser_cleanup = MagicMock()
-    with MagicMock() as mock_exit:
-        htag.server.os._exit = mock_exit
+    with patch("htag.server.os._exit") as mock_exit, \
+         patch("htag.server.asyncio.sleep", side_effect=fast_sleep):
         await app3._handle_websocket(ws3)
+        await real_sleep(0.1)
         assert app3._browser_cleanup.called
 
     # 4. Initial send failure case

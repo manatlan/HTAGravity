@@ -99,6 +99,9 @@ class GTag: # aka "Generic Tag"
     def __iadd__(self, other: Any) -> 'GTag':
         return self.add(other)
 
+    def __le__(self, other: Any) -> 'GTag':
+        return self.add(other)
+
     def __setattr__(self, name: str, value: Any) -> None:
         """
         Magic attribute handling:

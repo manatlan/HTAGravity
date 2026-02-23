@@ -159,3 +159,13 @@ def test_gtag_remove_self():
     child.remove_self()
     assert child not in parent._childs
     assert child._parent is None
+
+def test_gtag_le():
+    t = GTag("div")
+    t <= "hello"
+    assert "hello" in t._childs
+    
+    child = GTag("span")
+    t <= child
+    assert child in t._childs
+    assert child._parent == t

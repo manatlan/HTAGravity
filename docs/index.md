@@ -26,7 +26,7 @@ class HelloApp(Tag.App):
     def __init__(self):
         super().__init__()
         self += Tag.h1("Hello htag!")
-        self += Tag.button("Click Me", _onclick=lambda e: self.add(Tag.p("Clicked!")))
+        self <= Tag.button("Click Me", _onclick=lambda e: self.add(Tag.p("Clicked!")))
 
 if __name__ == "__main__":
     WebApp(HelloApp).run()
