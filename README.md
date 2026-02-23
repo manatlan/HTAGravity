@@ -23,3 +23,6 @@ HTAGravity is a Python library for building web applications using HTML, CSS, an
 ### Key Resiliency Features Added
 *   **F5/Reload Robustness**: Refreshing the browser no longer kills the Python backend; the session reconstructs cleanly.
 *   **HTTP Fallback (SSE + POST)**: If WebSockets are blocked (e.g. strict proxies) or fail to connect, the client seamlessly falls back to HTTP POST for events and Server-Sent Events (SSE) for receiving UI updates.
+
+### New API Features
+*   **`.root` property**: Every `GTag` has a `.root` property to easily reference the main `Tag.App` instance they are attached to, allowing deep components to easily trigger app-level actions (modals, toasts, etc.).

@@ -27,6 +27,7 @@ class MyComponent(Tag.div):
 - `self.remove(child)`: Removes a child.
 - `self.clear()`: Removes all children.
 - `self.remove_self()`: Removes the component from its parent.
+- `self.root`: Returns the `Tag.App` instance this component belongs to (or `None` if unattached).
 
 ```python
 # Using the += operator

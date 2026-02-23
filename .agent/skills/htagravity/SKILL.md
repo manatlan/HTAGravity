@@ -14,6 +14,7 @@ Every UI element in htagravity is a component created via `Tag`.
 - Use the `Tag` factory for standard HTML elements (e.g., `Tag.div`, `Tag.button`).
 - Create custom components by subclassing any `Tag.*` class.
 - Add children using `+=` or the `<=` operator (e.g., `self += Tag.p("hello")` or `self <= Tag.p("hello")`).
+- Use the `.root` property to get a reference to the main `Tag.App` instance (useful for triggering app-level events or modals).
 
 ```python
 from htag import Tag
