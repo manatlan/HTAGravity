@@ -76,12 +76,12 @@ class GTag: # aka "Generic Tag"
             self.add(arg)
 
         for k, v in kwargs.items():
-            if k.startswith("_"):
+            if k.startswith("_on"):
+                # Events like _onclick=my_callback -> saved in self._events
+                self._events[k[3:]] = v
+            elif k.startswith("_"):
                 # Attributes like _class="foo" -> class="foo"
                 self._attrs[k[1:]] = v
-            elif k.startswith("on"):
-                # Events like onclick=my_callback -> saved in self._events
-                self._events[k[2:]] = v
 
     def add(self, *content: Any) -> 'GTag':
         with self._lock:
@@ -109,16 +109,16 @@ class GTag: # aka "Generic Tag"
         """
         if name in ["_lock", "_childs", "_attrs", "_events", "_dirty", "_js_calls", "_parent", "tag", "id"]:
             super().__setattr__(name, value)
+        elif name.startswith("_on") and (callable(value) or isinstance(value, str)):
+            # Event (e.g., self._onclick = my_callback or self._onclick = "alert(1)")
+            with self._lock:
+                self._events[name[3:]] = value
+                self._dirty = True
         elif name.startswith("_"):
             # HTML attribute (e.g., self._class = "foo")
             attr_name = name[1:]
             with self._lock:
                 self._attrs[attr_name] = value
-                self._dirty = True
-        elif name.startswith("on") and (callable(value) or isinstance(value, str)):
-            # Event (e.g., self.onclick = my_callback or self.onclick = "alert(1)")
-            with self._lock:
-                self._events[name[2:]] = value
                 self._dirty = True
         else:
             # Regular Python attribute

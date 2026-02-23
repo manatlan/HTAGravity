@@ -16,7 +16,7 @@ class MessageBox(Tag.div):
         self += box
         box += Tag.h2(title, _class="msgbox-title")
         box += Tag.p(message, _class="msgbox-text")
-        box += Tag.button("OK", onclick=lambda e: self.remove_self(), _class="btn btn-primary btn-wide")
+        box += Tag.button("OK", _onclick=lambda e: self.remove_self(), _class="btn btn-primary btn-wide")
 
 class MyApp(Tag.App):
     statics = [
@@ -66,7 +66,7 @@ class MyApp(Tag.App):
         
         self.i_name = Tag.input(_value="", _placeholder="Full Name", _class="form-input")
         self.i_age = Tag.input(_value="", _placeholder="Age", _type="number", _class="form-input", _style="flex: 0.3;")
-        btn_add = Tag.button("Add Member", onclick=self.add_person, _class="btn btn-primary")
+        btn_add = Tag.button("Add Member", _onclick=self.add_person, _class="btn btn-primary")
         
         form += self.i_name + self.i_age + btn_add
         
@@ -87,7 +87,7 @@ class MyApp(Tag.App):
         
         # Rows
         for person in self.data:
-            btn_del = Tag.button("×", onclick=lambda e, p=person: self.del_person(p), _title="Remove member", _class="btn btn-danger-light")
+            btn_del = Tag.button("×", _onclick=lambda e, p=person: self.del_person(p), _title="Remove member", _class="btn btn-danger-light")
             row = Tag.tr()
             row += Tag.td(person["name"], _class="name-cell")
             row += Tag.td(str(person["age"]))

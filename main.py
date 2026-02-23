@@ -6,7 +6,7 @@ import logging
 class MyApp(Tag.App):
     def __init__(self):
         super().__init__()
-        b = Tag.button("add", onclick=self.onclick, oncontextmenu=self.onmenu, _style="color:green")
+        b = Tag.button("add", _onclick=self.onclick, _oncontextmenu=self.onmenu, _style="color:green")
         b.a_var=42
         self += b
 

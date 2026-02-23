@@ -70,8 +70,19 @@ ws.onmessage = function(event) {
 // Returns a Promise that resolves with the server's return value.
 function htag_event(id, event_name, event) {
     var callback_id = Math.random().toString(36).substring(2);
+    
+    // Determine the value to send (handle checkboxes specifically)
+    var val = null;
+    if (event.target) {
+        if (event.target.type === 'checkbox') {
+            val = event.target.checked;
+        } else {
+            val = event.target.value;
+        }
+    }
+    
     var data = {
-        value: event.target ? event.target.value : null,
+        value: val,
         key: event.key,
         pageX: event.pageX,
         pageY: event.pageY,

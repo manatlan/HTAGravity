@@ -75,7 +75,7 @@ class Explorer(Tag.div):
                 is_selected = self.selected_file == item
                 
                 div = Tag.div(_class=f"item {cls} {'selected' if is_selected else ''}", 
-                            onclick=lambda e, p=item: self.select_callback(p))
+                            _onclick=lambda e, p=item: self.select_callback(p))
                 
                 div += Tag.div("📁" if is_dir else "📄", _class="icon")
                 
@@ -173,7 +173,7 @@ class Viewer(Tag.div):
             
         header = Tag.div(_class="preview-header")
         header += Tag.span(self.file_path.name, _class="preview-title")
-        header += Tag.button("✕", _class="close-btn", onclick=lambda e: self.close_callback())
+        header += Tag.button("✕", _class="close-btn", _onclick=lambda e: self.close_callback())
         self += header
         
         content = Tag.div(_class="preview-content")
@@ -310,7 +310,7 @@ class FileNavigator(Tag.App):
         # Navigation Bar
         nav = Tag.div(_class="navbar")
         can_go_up = self.current_path.parent != self.current_path
-        btn_props = {"_class": "btn", "onclick": self.go_up}
+        btn_props = {"_class": "btn", "_onclick": self.go_up}
         if not can_go_up: btn_props["disabled"] = True
         nav += Tag.button("↑ Up", **btn_props)
         nav += Tag.h1("HTAGravity Explorer")

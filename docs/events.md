@@ -4,14 +4,14 @@
 
 ## Event Handlers
 
-You can attach event handlers to any `GTag` using the `on{event}` syntax:
+You can attach event handlers to any `GTag` using the `_on{event}` syntax:
 
 ```python
 def my_callback(e):
     print(f"Clicked on {e.target.id}")
     e.target.add(Tag.span("!"))
 
-btn = Tag.button("Click me", onclick=my_callback)
+btn = Tag.button("Click me", _onclick=my_callback)
 ```
 
 ### The Event Object
@@ -26,16 +26,16 @@ The `e` argument passed to the callback is an `Event` object containing:
 
 `htag` automatically synchronizes the state of input elements without requiring explicit event handlers.
 
-When you use an `<input>`, `<textarea>`, or `<select>`, `htag` injects an `oninput` event that updates the component's `_value` attribute in real-time on the server.
+When you use an `<input>`, `<textarea>`, or `<select>`, `htag` injects an `_oninput` event that updates the component's `_value` attribute in real-time on the server.
 
 ```python
 class MyForm(Tag.App):
     def __init__(self):
         super().__init__()
-        # No 'oninput' needed, it's automatic!
+        # No '_oninput' needed, it's automatic!
         self.entry = Tag.input(_value="Initial")
         self += self.entry
-        self += Tag.button("Show", onclick=lambda e: self.add(f"Value is: {self.entry._value}"))
+        self += Tag.button("Show", _onclick=lambda e: self.add(f"Value is: {self.entry._value}"))
 ```
 
 ## Async Handlers

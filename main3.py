@@ -152,12 +152,12 @@ class Sudoku(Tag.App):
         numpad = Tag.div(_class="numpad")
         container += numpad
         for i in range(1, 10):
-            numpad += Tag.button(str(i), _class="num-btn", onclick=lambda e, n=i: self.input_num(n))
-        numpad += Tag.button("C", _class="num-btn", onclick=lambda e: self.input_num(0))
+            numpad += Tag.button(str(i), _class="num-btn", _onclick=lambda e, n=i: self.input_num(n))
+        numpad += Tag.button("C", _class="num-btn", _onclick=lambda e: self.input_num(0))
         
         controls = Tag.div(_class="controls")
         container += controls
-        controls += Tag.button("NEW GAME", _class="btn", onclick=lambda e: self.new_game_and_render())
+        controls += Tag.button("NEW GAME", _class="btn", _onclick=lambda e: self.new_game_and_render())
 
     def new_game(self):
         self.solution, self.grid = SudokuLogic.generate(45)
@@ -186,7 +186,7 @@ class Sudoku(Tag.App):
                 
                 cell = Tag.div(str(val) if val != 0 else "", 
                               _class=" ".join(cls),
-                              onclick=lambda e, r=r, c=c: self.select_cell(r, c))
+                              _onclick=lambda e, r=r, c=c: self.select_cell(r, c))
                 self.board_tag += cell
 
     def select_cell(self, r, c):
