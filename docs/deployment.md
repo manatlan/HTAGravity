@@ -14,7 +14,7 @@ from htag import Tag
 
 class MyApp(Tag.App):
     def init(self):
-        self += Tag.h1("Production App")
+        self <= Tag.h1("Production App")
 
 # Create the FastAPI instance
 app = MyApp().app

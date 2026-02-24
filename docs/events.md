@@ -33,8 +33,8 @@ class MyForm(Tag.App):
     def init(self):
         # No '_oninput' needed, it's automatic!
         self.entry = Tag.input(_value="Initial")
-        self += self.entry
-        self += Tag.button("Show", _onclick=lambda e: self.add(f"Value is: {self.entry._value}"))
+        self <= self.entry
+        self <= Tag.button("Show", _onclick=lambda e: self.add(f"Value is: {self.entry._value}"))
 ```
 
 ## Async Handlers

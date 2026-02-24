@@ -13,10 +13,10 @@ class MessageBox(Tag.div):
     def init(self, title, message):
         self._class="msgbox-overlay"
         box = Tag.div(_class="msgbox-card")
-        self += box
-        box += Tag.h2(title, _class="msgbox-title")
-        box += Tag.p(message, _class="msgbox-text")
-        box += Tag.button("OK", _onclick=lambda e: self.remove_self(), _class="btn btn-primary btn-wide")
+        self <= box
+        box <= Tag.h2(title, _class="msgbox-title")
+        box <= Tag.p(message, _class="msgbox-text")
+        box <= Tag.button("OK", _onclick=lambda e: self.remove_self(), _class="btn btn-primary btn-wide")
 
 class MyApp(Tag.App):
     statics = [
@@ -56,24 +56,24 @@ class MyApp(Tag.App):
         ]
         
         container = Tag.div(_class="container")
-        self += container
-        container += Tag.h1("User Directory")
+        self <= container
+        container <= Tag.h1("User Directory")
         
         # Form Card
         form = Tag.div(_class="card form-card")
-        container += form
+        container <= form
         
         self.i_name = Tag.input(_value="", _placeholder="Full Name", _class="form-input")
         self.i_age = Tag.input(_value="", _placeholder="Age", _type="number", _class="form-input", _style="flex: 0.3;")
         btn_add = Tag.button("Add Member", _onclick=self.add_person, _class="btn btn-primary")
         
-        form += self.i_name + self.i_age + btn_add
+        form <= self.i_name + self.i_age + btn_add
         
         # Table Container
         self.table_box = Tag.div(_class="card")
-        container += self.table_box
+        container <= self.table_box
         self.table = Tag.table()
-        self.table_box += self.table
+        self.table_box <= self.table
         self.render_table()
 
     def render_table(self):
@@ -81,17 +81,17 @@ class MyApp(Tag.App):
         
         # Header
         thead = Tag.tr()
-        thead += Tag.th("NAME") + Tag.th("AGE") + Tag.th("")
-        self.table += thead
+        thead <= Tag.th("NAME") + Tag.th("AGE") + Tag.th("")
+        self.table <= thead
         
         # Rows
         for person in self.data:
             btn_del = Tag.button("×", _onclick=lambda e, p=person: self.del_person(p), _title="Remove member", _class="btn btn-danger-light")
             row = Tag.tr()
-            row += Tag.td(person["name"], _class="name-cell")
-            row += Tag.td(str(person["age"]))
-            row += Tag.td(btn_del, _style="text-align: right;")
-            self.table += row
+            row <= Tag.td(person["name"], _class="name-cell")
+            row <= Tag.td(str(person["age"]))
+            row <= Tag.td(btn_del, _style="text-align: right;")
+            self.table <= row
 
     def del_person(self, person):
         if person in self.data:
@@ -109,7 +109,7 @@ class MyApp(Tag.App):
             self.i_age._value = ""
             logger.info("Added person: %s", name)
         else:
-            self += MessageBox("Validation Error", "Please provide both a name and an age to continue.")
+            self <= MessageBox("Validation Error", "Please provide both a name and an age to continue.")
 
 if __name__ == "__main__":
     from htag import WebApp,ChromeApp

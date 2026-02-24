@@ -13,7 +13,7 @@ Use this skill to design, implement, and refine web applications using the **hta
 Every UI element in htagravity is a component created via `Tag`.
 - Use the `Tag` factory for standard HTML elements (e.g., `Tag.div`, `Tag.button`).
 - Create custom components by subclassing any `Tag.*` class.
-- Add children using `+=` or the `<=` operator (e.g., `self += Tag.p("hello")` or `self <= Tag.p("hello")`).
+- Add children using `+=` or the `<=` operator (e.g., `self <= Tag.p("hello")` or `self += Tag.p("hello")`).
 - Use the `.root` property to get a reference to the main `Tag.App` instance (useful for triggering app-level events or modals).
 - Use `.parent` to access the parent component, and `.childs` to access the list of child components.
 
@@ -22,7 +22,7 @@ from htag import Tag
 
 class MyComponent(Tag.div):
     def init(self, name, **kwargs):
-        self += Tag.h1(f"Hello {name}")
+        self <= Tag.h1(f"Hello {name}")
 ```
 
 ### 2. Component Lifecycle
@@ -32,20 +32,20 @@ htagravity provides three lifecycle hooks to override on custom components:
 - `on_unmount(self)`: Fired when the component is removed, ideal for cleaning up tasks, caches, or event listeners.
 
 ### 3. Composite Components
-When creating complex UI components (like a Card or a Window), you should override the `add(self, o)` method so that when users do `my_card += content`, the content goes into the correct inner container, not the root tag.
+When creating complex UI components (like a Card or a Window), you should override the `add(self, o)` method so that when users do `my_card <= content`, the content goes into the correct inner container, not the root tag.
 
 ```python
 class Card(Tag.div):
     def init(self, title, **kwargs):
         self._class="card"
-        self += Tag.h2(title)
+        self <= Tag.h2(title)
         self.body = Tag.div(_class="card-body")
         # Use Tag.div.add to bypass the overridden add method during init
         Tag.div.add(self, self.body)
 
     def add(self, o):
         # Redirect append operations (+-) to the body container
-        self.body += o
+        self.body <= o
 ```
 
 ### 3. State & Reactivity

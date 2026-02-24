@@ -137,26 +137,26 @@ class Sudoku(Tag.App):
         self.new_game()
 
         container = Tag.div(_class="container")
-        self += container
+        self <= container
         
-        container += Tag.h1("Sudoku Gravity")
+        container <= Tag.h1("Sudoku Gravity")
         self.status = Tag.div(_class="status")
-        container += self.status
+        container <= self.status
         
         self.board_tag = Tag.div(_class="board")
-        container += self.board_tag
+        container <= self.board_tag
         
         self.render_board()
         
         numpad = Tag.div(_class="numpad")
-        container += numpad
+        container <= numpad
         for i in range(1, 10):
-            numpad += Tag.button(str(i), _class="num-btn", _onclick=lambda e, n=i: self.input_num(n))
-        numpad += Tag.button("C", _class="num-btn", _onclick=lambda e: self.input_num(0))
+            numpad <= Tag.button(str(i), _class="num-btn", _onclick=lambda e, n=i: self.input_num(n))
+        numpad <= Tag.button("C", _class="num-btn", _onclick=lambda e: self.input_num(0))
         
         controls = Tag.div(_class="controls")
-        container += controls
-        controls += Tag.button("NEW GAME", _class="btn", _onclick=lambda e: self.new_game_and_render())
+        container <= controls
+        controls <= Tag.button("NEW GAME", _class="btn", _onclick=lambda e: self.new_game_and_render())
 
     def new_game(self):
         self.solution, self.grid = SudokuLogic.generate(45)
@@ -186,7 +186,7 @@ class Sudoku(Tag.App):
                 cell = Tag.div(str(val) if val != 0 else "", 
                               _class=" ".join(cls),
                               _onclick=lambda e, r=r, c=c: self.select_cell(r, c))
-                self.board_tag += cell
+                self.board_tag <= cell
 
     def select_cell(self, r, c):
         if not self.fixed[r][c]:
@@ -201,7 +201,7 @@ class Sudoku(Tag.App):
             
             # Check for win
             if all(self.grid[r][c] == self.solution[r][c] for r in range(9) for c in range(9)):
-                self.status += "CONGRATULATIONS! GRAVITY DEFIED."
+                self.status <= "CONGRATULATIONS! GRAVITY DEFIED."
                 self.selected = None
                 self.render_board()
 

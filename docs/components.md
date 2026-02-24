@@ -45,7 +45,7 @@ class Clock(Tag.div):
 ### Tree Manipulation
 
 - `self.add(*content)`: Adds children (strings or other components).
-- `self += content`: An elegant shorthand for `self.add(content)`.
+- `self <= content`: An elegant shorthand for `self.add(content)`.
 - `self.remove(child)`: Removes a child.
 - `self.clear()`: Removes all children.
 - `self.remove_self()`: Removes the component from its parent.
@@ -54,10 +54,10 @@ class Clock(Tag.div):
 - `self.childs`: A list of the component's children (strings or other `GTag` instances).
 
 ```python
-# Using the += operator
+# Using the <= operator
 row = Tag.div()
-row += Tag.span("Left")
-row += Tag.span("Right")
+row <= Tag.span("Left")
+row <= Tag.span("Right")
 ```
 
 ## Attributes and Style

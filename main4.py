@@ -77,23 +77,23 @@ class Explorer(Tag.div):
                 div = Tag.div(_class=f"item {cls} {'selected' if is_selected else ''}", 
                             _onclick=lambda e, p=item: self.select_callback(p))
                 
-                div += Tag.div("📁" if is_dir else "📄", _class="icon")
+                div <= Tag.div("📁" if is_dir else "📄", _class="icon")
                 
                 info = Tag.div(_class="info")
-                info += Tag.span(item.name, _class="name")
+                info <= Tag.span(item.name, _class="name")
                 
                 if not is_dir:
                     try:
                         size = item.stat().st_size
-                        info += Tag.span(self.format_size(size), _class="details")
+                        info <= Tag.span(self.format_size(size), _class="details")
                     except Exception: pass
                 else:
-                    info += Tag.span("Folder", _class="details")
+                    info <= Tag.span("Folder", _class="details")
                 
-                div += info
-                self += div
+                div <= info
+                self <= div
         except Exception as e:
-            self += Tag.div(f"Error: {e}", _style="color: #ff6b6b; padding: 20px")
+            self <= Tag.div(f"Error: {e}", _style="color: #ff6b6b; padding: 20px")
 
     def format_size(self, size):
         for unit in ['B', 'KB', 'MB', 'GB']:
@@ -172,9 +172,9 @@ class Viewer(Tag.div):
             return
             
         header = Tag.div(_class="preview-header")
-        header += Tag.span(self.file_path.name, _class="preview-title")
-        header += Tag.button("✕", _class="close-btn", _onclick=lambda e: self.close_callback())
-        self += header
+        header <= Tag.span(self.file_path.name, _class="preview-title")
+        header <= Tag.button("✕", _class="close-btn", _onclick=lambda e: self.close_callback())
+        self <= header
         
         content = Tag.div(_class="preview-content")
         if self.is_text_file(self.file_path):
@@ -191,7 +191,7 @@ class Viewer(Tag.div):
         else:
             content += "Preview not available for this file type."
         
-        self += content
+        self <= content
 
     def is_text_file(self, path):
         text_extensions = {
@@ -299,7 +299,7 @@ class FileNavigator(Tag.App):
     def __init__(self):
         super().__init__()
         self.main = Tag.div(_class="main-container")
-        self += self.main
+        self <= self.main
         self.current_path = Path(os.getcwd()).resolve()
         self.selected_file = None
         self.render_all()
@@ -312,24 +312,24 @@ class FileNavigator(Tag.App):
         can_go_up = self.current_path.parent != self.current_path
         btn_props = {"_class": "btn", "_onclick": self.go_up}
         if not can_go_up: btn_props["disabled"] = True
-        nav += Tag.button("↑ Up", **btn_props)
-        nav += Tag.h1("HTAGravity Explorer")
-        self.main += nav
+        nav <= Tag.button("↑ Up", **btn_props)
+        nav <= Tag.h1("HTAGravity Explorer")
+        self.main <= nav
 
         # Breadcrumbs
-        self.main += Tag.div(str(self.current_path), _class="breadcrumb-bar")
+        self.main <= Tag.div(str(self.current_path), _class="breadcrumb-bar")
 
         # Split View
         split = Tag.div(_class="split-view")
         
         # Explorer (Left)
-        split += Explorer(self.current_path, self.selected_file, self.on_item_click)
+        split <= Explorer(self.current_path, self.selected_file, self.on_item_click)
         
         # Viewer (Right)
         if self.selected_file:
-            split += Viewer(self.selected_file, self.on_close_viewer)
+            split <= Viewer(self.selected_file, self.on_close_viewer)
             
-        self.main += split
+        self.main <= split
 
     def on_item_click(self, item):
         if item.is_dir():
