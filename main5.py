@@ -11,8 +11,8 @@ logger = logging.getLogger("tailwind-demo")
 
 class Button(Tag.button):
     """A reusable button component with Tailwind styling."""
-    def __init__(self, label, variant="primary", **kwargs):
-        super().__init__(label, **kwargs)
+    def init(self, label, variant="primary", **kwargs):
+        self <= label
         
         # Base styles for all buttons
         base_classes = "px-4 py-2 rounded-lg font-medium transition-colors duration-200 shadow-sm"
@@ -33,8 +33,8 @@ class Button(Tag.button):
 
 class Card(Tag.div):
     """A reusable card container component."""
-    def __init__(self, title=None, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, title=None, **kwargs):
+
         self._class = "bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden"
         if "_class" in kwargs:
              self._class += f" {kwargs['_class']}"
@@ -54,14 +54,13 @@ class Card(Tag.div):
 
 class Badge(Tag.span):
     """A small pill badge for status or counts."""
-    def __init__(self, text, color="blue", **kwargs):
-        super().__init__(text, **kwargs)
+    def init(self, text, color="blue", **kwargs):
+        self <= text
         self._class = f"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-{color}-100 text-{color}-800"
 
 class Alert(Tag.div):
     """An alert banner component."""
-    def __init__(self, message, variant="info", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, message, variant="info", **kwargs):
         if variant == "info":
             self._class = "p-4 mb-4 text-sm text-blue-800 rounded-lg bg-blue-50 border border-blue-200"
         elif variant == "success":
@@ -78,8 +77,8 @@ class Alert(Tag.div):
 
 class Toast(Tag.div):
     """A client-side self-closing toast component."""
-    def __init__(self, message, variant="info", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, message, variant="info", **kwargs):
+       
         
         # Mapping variants to Tailwind colors
         colors = {
@@ -115,8 +114,7 @@ class Toast(Tag.div):
 
 class Modal(Tag.div):
     """A full-screen modal dialog component."""
-    def __init__(self, title, content, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, title, content, **kwargs):
         self._class = "fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black bg-opacity-50"
         self._style = "display: none;"
         self._onclick = self.hide # Close on overlay click
@@ -150,8 +148,7 @@ class Modal(Tag.div):
 
 class Input(Tag.input):
     """A styled text input component."""
-    def __init__(self, placeholder="", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, placeholder="", **kwargs):
         self._type = "text"
         self._placeholder = placeholder
         self._class = "bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 outline-none transition-colors"
@@ -189,8 +186,7 @@ class Toggle(Tag.label):
 
 class Table(Tag.div):
     """A responsive table component."""
-    def __init__(self, headers, rows, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, headers, rows, **kwargs):
         self._class = "relative overflow-x-auto shadow-md sm:rounded-lg"
         if "_class" in kwargs:
              self._class += f" {kwargs['_class']}"
@@ -224,8 +220,7 @@ class Table(Tag.div):
 
 class ProgressBar(Tag.div):
     """A simple progress bar component."""
-    def __init__(self, progress=0, color="blue", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, progress=0, color="blue", **kwargs):
         self.progress = max(0, min(100, progress)) # Clamp between 0 and 100
         self._class = "w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700"
         
@@ -238,8 +233,7 @@ class ProgressBar(Tag.div):
 
 class CodeBlock(Tag.div):
     """A styled container to display code snippets."""
-    def __init__(self, code, language="python", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, code, language="python", **kwargs):
         self._class = "rounded-md bg-slate-800 p-4 overflow-x-auto text-sm text-slate-50 font-mono shadow-inner border border-slate-700"
         if "_class" in kwargs:
              self._class += f" {kwargs['_class']}"
@@ -251,8 +245,7 @@ class CodeBlock(Tag.div):
 
 class Spinner(Tag.div):
     """A loading spinner component."""
-    def __init__(self, size="md", color="blue", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, size="md", color="blue", **kwargs):
         
         # Mapping sizes to Tailwind classes
         sizes = {
@@ -279,8 +272,7 @@ class Spinner(Tag.div):
 
 class Accordion(Tag.div):
     """A collapsible accordion item."""
-    def __init__(self, title, content, is_open=False, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, title, content, is_open=False, **kwargs):
         self.is_open = is_open
         self._class = "border border-gray-200 rounded-lg mb-2 overflow-hidden"
         
@@ -323,8 +315,7 @@ class Accordion(Tag.div):
 
 class MessageBox(Tag.div):
     """A modal dialog component."""
-    def __init__(self, title, message, on_close=None, type="info", **kwargs):
-        super().__init__(**kwargs)
+    def init(self, title, message, on_close=None, type="info", **kwargs):
         self.on_close = on_close
         
         # Type styling
@@ -391,8 +382,7 @@ class MessageBox(Tag.div):
 
 class Tabs(Tag.div):
     """A tabbed layout component."""
-    def __init__(self, tabs_dict, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, tabs_dict, **kwargs):
         self._class = "w-full"
         self.tabs_dict = tabs_dict
         self.active_tab = list(tabs_dict.keys())[0] if tabs_dict else None
@@ -435,8 +425,8 @@ class Tabs(Tag.div):
 
 class Dropdown(Tag.div):
     """A floating dropdown menu component."""
-    def __init__(self, title, items, **kwargs):
-        super().__init__(**kwargs)
+    def init(self, title, items, **kwargs):
+
         self._class = "relative inline-block text-left"
         if "_class" in kwargs: self._class += f" {kwargs['_class']}"
         self.is_open = False
@@ -487,8 +477,7 @@ class DemoApp(Tag.App):
         Tag.style("body { background-color: #f8fafc; }") # Light slate background for the whole page
     ]
 
-    def __init__(self):
-        super().__init__()
+    def init(self):
         self.counter = 0
 
         # Main Layout Container
