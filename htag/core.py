@@ -74,9 +74,7 @@ class GTag: # aka "Generic Tag"
         self.id = f"{self.tag}-{id(self)}"
         logger.debug("Created Tag: %s (id: %s)", self.tag, self.id)
 
-        for arg in args:
-            self.add(arg)
-
+        left_kwargs = {}
         for k, v in kwargs.items():
             if k.startswith("_on"):
                 # Events like _onclick=my_callback -> saved in self.__events
@@ -84,12 +82,15 @@ class GTag: # aka "Generic Tag"
             elif k.startswith("_"):
                 # Attributes like _class="foo" -> class="foo"
                 self.__attrs[k[1:]] = v
+            else:
+                left_kwargs[k] = v
                 
-        self.init()
+        self.init(*args, **left_kwargs)
 
-    def init(self) -> None:
+    def init(self, *args: Any, **kwargs: Any) -> None:
         """Called automatically at the end of GTag initialization."""
-        pass
+        for arg in args:
+            self.add(arg)
 
     def on_mount(self) -> None:
         """Called when this tag (and its descendants) is attached to the App root."""

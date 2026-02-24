@@ -4,9 +4,9 @@ import logging
 # logging.basicConfig(level=logging.INFO)
 
 class MyApp(Tag.App):
-    def __init__(self):
-        super().__init__()
+    def init(self, *args, **kwargs):
         b = Tag.button("add", _onclick=self.onclick, _oncontextmenu=self.onmenu, _style="color:green")
+        super().init(*args, **kwargs)
         b.a_var=42
         self += b
 
