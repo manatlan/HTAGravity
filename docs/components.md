@@ -28,6 +28,8 @@ class MyComponent(Tag.div):
 - `self.clear()`: Removes all children.
 - `self.remove_self()`: Removes the component from its parent.
 - `self.root`: Returns the `Tag.App` instance this component belongs to (or `None` if unattached).
+- `self.parent`: Returns the parent `GTag` instance (or `None` if unattached).
+- `self.childs`: A list of the component's children (strings or other `GTag` instances).
 
 ```python
 # Using the += operator

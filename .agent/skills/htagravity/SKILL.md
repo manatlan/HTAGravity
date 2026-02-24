@@ -15,6 +15,7 @@ Every UI element in htagravity is a component created via `Tag`.
 - Create custom components by subclassing any `Tag.*` class.
 - Add children using `+=` or the `<=` operator (e.g., `self += Tag.p("hello")` or `self <= Tag.p("hello")`).
 - Use the `.root` property to get a reference to the main `Tag.App` instance (useful for triggering app-level events or modals).
+- Use `.parent` to access the parent component, and `.childs` to access the list of child components.
 
 ```python
 from htag import Tag

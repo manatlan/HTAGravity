@@ -54,6 +54,8 @@ class GTag: # aka "Generic Tag"
         - kwargs: HTML attributes (prefixed with '_') or events (prefixed with 'on').
         """
         self.__lock = threading.RLock()
+        
+        # Public properties for tree traversal
         self.childs: List[Union[str, 'GTag']] = []
         self.parent: Optional['GTag'] = None
         self.__attrs: Dict[str, Any] = {}

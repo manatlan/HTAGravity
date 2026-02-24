@@ -25,4 +25,4 @@ HTAGravity is a Python library for building web applications using HTML, CSS, an
 *   **HTTP Fallback (SSE + POST)**: If WebSockets are blocked (e.g. strict proxies) or fail to connect, the client seamlessly falls back to HTTP POST for events and Server-Sent Events (SSE) for receiving UI updates.
 
 ### New API Features
-*   **`.root` property**: Every `GTag` has a `.root` property to easily reference the main `Tag.App` instance they are attached to, allowing deep components to easily trigger app-level actions (modals, toasts, etc.).
+*   **`.root`, `.parent`, and `.childs` properties**: Every `GTag` exposes its position in the component tree. `.root` references the main `Tag.App` instance, `.parent` references the direct parent component, and `.childs` is a list of its children. This allows components to easily navigate the DOM tree and trigger app-level actions.
