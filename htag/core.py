@@ -55,7 +55,7 @@ class GTag: # aka "Generic Tag"
         """
         self._lock = threading.RLock()
         self._childs: List[Union[str, 'GTag']] = []
-        self._parent: Optional['GTag'] = None
+        self.parent: Optional['GTag'] = None
         self._attrs: Dict[str, Any] = {}
         self._events: Dict[str, Callable] = {}
         self._dirty = False
@@ -92,7 +92,7 @@ class GTag: # aka "Generic Tag"
                 else:
                     self._childs.append(item)
                     if isinstance(item, GTag):
-                        item._parent = self
+                        item.parent = self
             self._dirty = True
         return self
 
@@ -110,7 +110,7 @@ class GTag: # aka "Generic Tag"
         - Attributes starting with 'on' are treated as event callbacks.
         - Setting an HTML attribute or event marks the tag as 'dirty' for client-side update.
         """
-        if name in ["_lock", "_childs", "_attrs", "_events", "_dirty", "_js_calls", "_parent", "tag", "id"]:
+        if name in ["_lock", "_childs", "_attrs", "_events", "_dirty", "_js_calls", "parent", "tag", "id"]:
             super().__setattr__(name, value)
         elif name.startswith("_on") and (callable(value) or isinstance(value, str)):
             # Event (e.g., self._onclick = my_callback or self._onclick = "alert(1)")
@@ -147,13 +147,13 @@ class GTag: # aka "Generic Tag"
             if item in self._childs:
                 self._childs.remove(item)
                 if isinstance(item, GTag):
-                    item._parent = None
+                    item.parent = None
                 self._dirty = True
         return self
 
     def remove_self(self) -> 'GTag':
-        if self._parent:
-            self._parent.remove(self)
+        if self.parent:
+            self.parent.remove(self)
         return self
 
     @property
@@ -162,7 +162,7 @@ class GTag: # aka "Generic Tag"
         while current is not None:
             if isinstance(current, Tag.App):
                 return current
-            current = current._parent
+            current = current.parent
         return None
 
     def clear(self) -> 'GTag':

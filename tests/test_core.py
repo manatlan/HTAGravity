@@ -23,13 +23,13 @@ def test_gtag_add_remove():
     t._dirty = False
     t.add(child)
     assert child in t._childs
-    assert child._parent == t
+    assert child.parent == t
     assert t._dirty is True
     
     t._dirty = False
     t.remove(child)
     assert child not in t._childs
-    assert child._parent is None
+    assert child.parent is None
     assert t._dirty is True
 
 def test_gtag_clear():
@@ -158,7 +158,7 @@ def test_gtag_remove_self():
     parent.add(child)
     child.remove_self()
     assert child not in parent._childs
-    assert child._parent is None
+    assert child.parent is None
 
 def test_gtag_le():
     t = GTag("div")
@@ -168,7 +168,7 @@ def test_gtag_le():
     child = GTag("span")
     t <= child
     assert child in t._childs
-    assert child._parent == t
+    assert child.parent == t
 
 def test_gtag_root():
     class MyApp(Tag.App):
