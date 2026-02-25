@@ -1,4 +1,4 @@
-# HTAGravity
+# htag2
 
 <p align="center">
   <img src="docs/assets/logo.png" width="300" alt="htagravity logo">
@@ -10,15 +10,15 @@ It feels very good. It's not a replacement, it's just a POC.
 
 It's completly crazy, but it works (for the basics, on linux only, and with "chrome app mode" only).
 
-[DOC](https://manatlan.github.io/HTAGravity/)
+[DOC](https://manatlan.github.io/htag2/)
 
 ## Get Started
 
-Check the [Official Documentation](https://manatlan.github.io/HTAGravity/) for more information.
+Check the [Official Documentation](https://manatlan.github.io/htag2/) for more information.
 
 ## Antigravity resumes :
 
-HTAGravity is a Python library for building web applications using HTML, CSS, and JavaScript. It is a fork of the HTAG library, designed to be a more complete and feature-rich alternative.
+HTAGravity (now renamed to htag2) is a Python library for building web applications using HTML, CSS, and JavaScript.
 
 ### Key Resiliency Features Added
 *   **F5/Reload Robustness**: Refreshing the browser no longer kills the Python backend; the session reconstructs cleanly.

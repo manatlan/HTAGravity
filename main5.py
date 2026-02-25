@@ -587,14 +587,14 @@ class DemoApp(Tag.App):
                         
                         with Tag.div():
                             Tag.h3("Code Snippet", _class="text-sm font-semibold text-gray-700 mb-2")
-                            CodeBlock('def hello_world():\n    print("Hello from HTAGGravity!")', language="python")
+                            CodeBlock('def hello_world():\n    print("Hello from htag2!")', language="python")
 
                 # --- Card 7: Advanced ---
                 with Card(title="Advanced Components", _class="md:col-span-2"):
                     with Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8"):
                         with Tag.div():
                             Tag.h3("Accordions / Expansion Panels", _class="text-sm font-semibold text-gray-700 mb-4")
-                            Accordion("What is HTAGGravity?", "HTAGravity is a lightweight, pure Python framework for building modern web applications without writing JavaScript.", is_open=True)
+                            Accordion("What is htag2?", "htag2 is a lightweight, pure Python framework for building modern web applications without writing JavaScript.", is_open=True)
                             Accordion("Why use Tailwind CSS?", "Tailwind allows you to rapidly build custom user interfaces by composing utility classes directly in your markup, keeping CSS files small.")
                         
                         with Tag.div():

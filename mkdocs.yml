@@ -1,8 +1,8 @@
 site_name: htag
-site_url: https://manatlan.github.io/HTAGravity/
+site_url: https://manatlan.github.io/htag2/
 site_description: Build modern web apps in Python
-repo_url: https://github.com/manatlan/HTAGravity
-repo_name: manatlan/HTAGravity
+repo_url: https://github.com/manatlan/htag2
+repo_name: manatlan/htag2
 
 theme:
   name: material

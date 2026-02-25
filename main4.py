@@ -313,7 +313,7 @@ class FileNavigator(Tag.App):
                     _disabled=lambda: self.path.value.parent == self.path.value,
                     _onclick=self.go_up
                 )
-                Tag.h1("HTAGravity Explorer")
+                Tag.h1("htag2 Explorer")
 
             # Breadcrumbs (Reactive)
             Tag.div(lambda: str(self.path.value), _class="breadcrumb-bar")

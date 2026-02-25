@@ -66,7 +66,7 @@ def my_generator(e):
 
 ### Async Generators
 
-HTAGravity also supports `async for` generators for asynchronous UI streaming.
+htag2 also supports `async for` generators for asynchronous UI streaming.
 
 ```python
 async def my_async_gen(e):

@@ -1,6 +1,6 @@
 # Reactivity and State
 
-HTAGravity features a powerful, zero-boilerplate reactivity system inspired by modern web frameworks. It allows you to build data-driven UIs where components update automatically as your data changes.
+htag2 features a powerful, zero-boilerplate reactivity system inspired by modern web frameworks. It allows you to build data-driven UIs where components update automatically as your data changes.
 
 ## The State Object
 
@@ -24,7 +24,7 @@ Tag.button("+1", _onclick=lambda e: self.count.set(self.count.value + 1))
 
 ## Reactive Children
 
-You can pass a lambda as a child to any tag. HTAGravity will automatically track which `State` objects are accessed during the lambda's execution and will re-render just that part of the UI when the state changes.
+You can pass a lambda as a child to any tag. htag2 will automatically track which `State` objects are accessed during the lambda's execution and will re-render just that part of the UI when the state changes.
 
 ```python
 # The text will update automatically whenever self.count changes
@@ -54,7 +54,7 @@ Tag.div(
 
 ### Boolean Attributes
 
-HTAGravity handles boolean attributes (like `disabled`, `checked`, `required`, `readonly`) intelligently:
+htag2 handles boolean attributes (like `disabled`, `checked`, `required`, `readonly`) intelligently:
 
 - **True**: Renders the attribute name only (e.g., `<button disabled>`).
 - **False / None**: Omit the attribute entirely (e.g., `<button>`).
@@ -66,6 +66,6 @@ Tag.button("Submit", _disabled=lambda: self.is_loading.value)
 
 ## How it Works
 
-1.  **Dependency Tracking**: When a reactive lambda is executed, HTAGravity records which `State` objects were read.
+1.  **Dependency Tracking**: When a reactive lambda is executed, htag2 records which `State` objects were read.
 2.  **Notification**: When a `State` value is modified, it notifies all recorded components ("observers").
 3.  **Selective Re-rendering**: The framework re-renders only the necessary components and sends the minimal HTML delta to the browser over WebSockets.
