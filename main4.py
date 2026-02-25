@@ -197,9 +197,11 @@ class Viewer(Tag.div):
         text_extensions = {
             '.py', '.md', '.txt', '.json', '.yml', '.yaml', 
             '.css', '.html', '.js', '.toml', '.xml', '.sh', 
-            '.bat', '.log', '.ini', '.cfg', '.sql', '.svg'
+            '.bat', '.log', '.ini', '.cfg', '.sql', '.svg', ".conf", ".properties", ".env"
         }
         return path.suffix.lower() in text_extensions
+
+from htag.core import State
 
 class FileNavigator(Tag.App):
     statics = [
@@ -296,59 +298,50 @@ class FileNavigator(Tag.App):
         """)
     ]
 
-    def __init__(self):
-        super().__init__()
-        self.main = Tag.div(_class="main-container")
-        self <= self.main
-        self.current_path = Path(os.getcwd()).resolve()
-        self.selected_file = None
-        self.render_all()
+    def init(self):
+        # 1. State Initialization
+        self.path = State(Path(os.getcwd()).resolve())
+        self.selected = State(None)
 
-    def render_all(self):
-        self.main.clear()
-        
-        # Navigation Bar
-        nav = Tag.div(_class="navbar")
-        can_go_up = self.current_path.parent != self.current_path
-        btn_props = {"_class": "btn", "_onclick": self.go_up}
-        if not can_go_up: btn_props["disabled"] = True
-        nav <= Tag.button("↑ Up", **btn_props)
-        nav <= Tag.h1("HTAGravity Explorer")
-        self.main <= nav
+        # 2. Declarative Layout
+        with Tag.div(_class="main-container"):
+            # Navigation Bar
+            with Tag.div(_class="navbar"):
+                # "Up" button visibility is reactive
+                Tag.button("↑ Up", 
+                    _class="btn", 
+                    _disabled=lambda: self.path.value.parent == self.path.value,
+                    _onclick=self.go_up
+                )
+                Tag.h1("HTAGravity Explorer")
 
-        # Breadcrumbs
-        self.main <= Tag.div(str(self.current_path), _class="breadcrumb-bar")
+            # Breadcrumbs (Reactive)
+            Tag.div(lambda: str(self.path.value), _class="breadcrumb-bar")
 
-        # Split View
-        split = Tag.div(_class="split-view")
-        
-        # Explorer (Left)
-        split <= Explorer(self.current_path, self.selected_file, self.on_item_click)
-        
-        # Viewer (Right)
-        if self.selected_file:
-            split <= Viewer(self.selected_file, self.on_close_viewer)
-            
-        self.main <= split
+            # Split View
+            with Tag.div(_class="split-view"):
+                # Explorer (Left)
+                # Re-renders whenever path or selection changes
+                Tag.add(lambda: Explorer(self.path.value, self.selected.value, self.on_item_click))
+                
+                # Viewer (Right)
+                # Conditionally shows based on selected file
+                Tag.add(lambda: Viewer(self.selected.value, self.on_close_viewer) if self.selected.value else None)
 
     def on_item_click(self, item):
         if item.is_dir():
-            self.current_path = item
-            self.selected_file = None
-            self.render_all()
+            self.path.value = item
+            self.selected.value = None
         else:
-            self.selected_file = item
-            self.render_all()
+            self.selected.value = item
 
     def go_up(self, e):
-        if self.current_path.parent != self.current_path:
-            self.current_path = self.current_path.parent
-            self.selected_file = None
-            self.render_all()
+        if self.path.value.parent != self.path.value:
+            self.path.value = self.path.value.parent
+            self.selected.value = None
 
     def on_close_viewer(self):
-        self.selected_file = None
-        self.render_all()
+        self.selected.value = None
 
 if __name__ == "__main__":
     ChromeApp(FileNavigator, width=1200, height=800).run()

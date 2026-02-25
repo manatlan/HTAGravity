@@ -46,6 +46,8 @@ class SudokuLogic:
             puzzle[r][c] = 0
         return grid, puzzle
 
+from htag.core import State
+
 class Sudoku(Tag.App):
     statics = [
         Tag.link(rel="stylesheet", href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap"),
@@ -133,77 +135,74 @@ class Sudoku(Tag.App):
     ]
 
     def init(self):
-        self.selected = None
-        self.new_game()
+        # 1. State Initialization
+        self.solution, grid = SudokuLogic.generate(45)
+        self.fixed = [[col != 0 for col in row] for row in grid]
+        self.grid = State(grid)
+        self.selected = State(None)
+        
+        # 2. Declarative Layout
+        with Tag.div(_class="container"):
+            Tag.h1("Sudoku Gravity")
+            self.status_box = Tag.div(_class="status")
+            
+            with Tag.div(_class="board"):
+                for r in range(9):
+                    for c in range(9):
+                        # Each cell is fully reactive: content AND class
+                        Tag.div(
+                            lambda r=r, c=c: self._get_cell_val(r, c),
+                            _class=lambda r=r, c=c: self._get_cell_cls(r, c),
+                            _onclick=lambda e, r=r, c=c: self.select_cell(r, c)
+                        )
+            
+            with Tag.div(_class="numpad"):
+                for i in range(1, 10):
+                    Tag.button(str(i), _class="num-btn", _onclick=lambda e, n=i: self.input_num(n))
+                Tag.button("C", _class="num-btn", _onclick=lambda e: self.input_num(0))
+            
+            with Tag.div(_class="controls"):
+                Tag.button("NEW GAME", _class="btn", _onclick=lambda e: self.new_game())
 
-        container = Tag.div(_class="container")
-        self <= container
+    def _get_cell_val(self, r, c):
+        val = self.grid.value[r][c]
+        return str(val) if val != 0 else ""
+
+    def _get_cell_cls(self, r, c):
+        val = self.grid.value[r][c]
+        is_fixed = self.fixed[r][c]
+        sel = self.selected.value
         
-        container <= Tag.h1("Sudoku Gravity")
-        self.status = Tag.div(_class="status")
-        container <= self.status
-        
-        self.board_tag = Tag.div(_class="board")
-        container <= self.board_tag
-        
-        self.render_board()
-        
-        numpad = Tag.div(_class="numpad")
-        container <= numpad
-        for i in range(1, 10):
-            numpad <= Tag.button(str(i), _class="num-btn", _onclick=lambda e, n=i: self.input_num(n))
-        numpad <= Tag.button("C", _class="num-btn", _onclick=lambda e: self.input_num(0))
-        
-        controls = Tag.div(_class="controls")
-        container <= controls
-        controls <= Tag.button("NEW GAME", _class="btn", _onclick=lambda e: self.new_game_and_render())
+        cls = ["cell"]
+        if is_fixed: cls.append("fixed")
+        if sel == (r, c): cls.append("selected")
+        if val != 0 and val != self.solution[r][c]:
+            cls.append("error")
+        return " ".join(cls)
 
     def new_game(self):
-        self.solution, self.grid = SudokuLogic.generate(45)
-        self.fixed = [[col != 0 for col in row] for row in self.grid]
-        self.selected = None
-
-    def new_game_and_render(self):
-        self.new_game()
-        self.status.clear()
-        self.render_board()
-
-    def render_board(self):
-        self.board_tag.clear()
-        for r in range(9):
-            for c in range(9):
-                val = self.grid[r][c]
-                is_fixed = self.fixed[r][c]
-                
-                cls = ["cell"]
-                if is_fixed: cls.append("fixed")
-                if self.selected == (r, c): cls.append("selected")
-                
-                # Check for errors (if not 0 and doesn't match solution)
-                if val != 0 and val != self.solution[r][c]:
-                    cls.append("error")
-                
-                cell = Tag.div(str(val) if val != 0 else "", 
-                              _class=" ".join(cls),
-                              _onclick=lambda e, r=r, c=c: self.select_cell(r, c))
-                self.board_tag <= cell
+        self.solution, grid = SudokuLogic.generate(45)
+        self.fixed = [[col != 0 for col in row] for row in grid]
+        self.grid.value = grid
+        self.selected.value = None
+        self.status_box.text = ""
 
     def select_cell(self, r, c):
         if not self.fixed[r][c]:
-            self.selected = (r, c)
-            self.render_board()
+            self.selected.value = (r, c)
 
     def input_num(self, n):
-        if self.selected:
-            r, c = self.selected
-            self.grid[r][c] = n
-            self.render_board()
+        if self.selected.value:
+            r, c = self.selected.value
+            # Shallow copy and update to trigger State
+            new_grid = [row[:] for row in self.grid.value]
+            new_grid[r][c] = n
+            self.grid.value = new_grid
             
             # Check for win
-            if all(self.grid[r][c] == self.solution[r][c] for r in range(9) for c in range(9)):
-                self.status <= "CONGRATULATIONS! GRAVITY DEFIED."
-                self.selected = None
-                self.render_board()
+            if all(new_grid[r][c] == self.solution[r][c] for r in range(9) for c in range(9)):
+                self.status_box.text = "CONGRATULATIONS! GRAVITY DEFIED."
+                self.selected.value = None
 
 if __name__ == "__main__":
     ChromeApp(Sudoku, width=600, height=850).run()

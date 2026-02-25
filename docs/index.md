@@ -9,7 +9,8 @@
 ## Features
 
 - **Component-Based**: Build complex UIs using reusable components via `Tag`.
-- **Pythonic**: All UI logic and state management are written in pure Python.
+- **Pythonic & Declarative**: Write UI logic cleanly with `with` blocks (Context Managers).
+- **Reactive State**: True zero-boilerplate `State` management (like React/SolidJS) in pure Python.
 - **Real-time**: Automatic synchronization of UI changes via WebSockets.
 - **Responsive**: Built-in support for multiple runners (Browser, Chrome App).
 - **Type-Safe**: Comprehensive type hints for a great developer experience.
@@ -21,11 +22,19 @@ Creating a basic `htag` app is simple:
 
 ```python
 from htag import Tag, WebApp
+from htag.core import State
 
 class HelloApp(Tag.App):
     def init(self):
-        self <= Tag.h1("Hello htag!")
-        self <= Tag.button("Click Me", _onclick=lambda e: self.add(Tag.p("Clicked!")))
+        self.count = State(0)
+        
+        with Tag.div(_class="container"):
+            Tag.h1("Hello htag!")
+            Tag.p(lambda: f"Clicked {self.count.value} times")
+            Tag.button("Click Me", _onclick=self.increment)
+
+    def increment(self, e):
+        self.count.value += 1
 
 if __name__ == "__main__":
     WebApp(HelloApp).run()
@@ -40,4 +49,4 @@ if __name__ == "__main__":
 
 ---
 
-[Next: Components →](components.md)
+[Next: Components →](components.md) | [Reactivity & State →](reactivity.md)

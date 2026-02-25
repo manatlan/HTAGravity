@@ -1,0 +1,71 @@
+# Reactivity and State
+
+HTAGravity features a powerful, zero-boilerplate reactivity system inspired by modern web frameworks. It allows you to build data-driven UIs where components update automatically as your data changes.
+
+## The State Object
+
+The `State` class is the heart of the reactivity system. It tracks dependencies and notifies components when values change.
+
+```python
+from htag.core import State
+
+class MyApp(Tag.App):
+    def init(self):
+        self.count = State(0)
+```
+
+### Functional Updates with `.set()`
+
+When updating state within a lambda (e.g., in an event callback), use `state.set(new_value)`. This updates the state and returns the new value.
+
+```python
+Tag.button("+1", _onclick=lambda e: self.count.set(self.count.value + 1))
+```
+
+## Reactive Children
+
+You can pass a lambda as a child to any tag. HTAGravity will automatically track which `State` objects are accessed during the lambda's execution and will re-render just that part of the UI when the state changes.
+
+```python
+# The text will update automatically whenever self.count changes
+Tag.p(lambda: f"The current count is {self.count.value}")
+```
+
+### Lists of Components
+
+Lambdas can also return lists or tuples of components. HTAGravity handles the flattening and rendering automatically.
+
+```python
+Tag.ul(lambda: [Tag.li(user.name) for user in self.users.value])
+```
+
+## Reactive & Boolean Attributes
+
+Attributes can also be reactive by passing a lambda.
+
+### Dynamic Classes and Styles
+
+```python
+Tag.div(
+    _class=lambda: "text-red-600" if self.error.value else "text-green-600",
+    _style=lambda: f"opacity: {self.opacity.value}%"
+)
+```
+
+### Boolean Attributes
+
+HTAGravity handles boolean attributes (like `disabled`, `checked`, `required`, `readonly`) intelligently:
+
+- **True**: Renders the attribute name only (e.g., `<button disabled>`).
+- **False / None**: Omit the attribute entirely (e.g., `<button>`).
+- **Lambda**: Can return `True`, `False`, or `None` for dynamic control.
+
+```python
+Tag.button("Submit", _disabled=lambda: self.is_loading.value)
+```
+
+## How it Works
+
+1.  **Dependency Tracking**: When a reactive lambda is executed, HTAGravity records which `State` objects were read.
+2.  **Notification**: When a `State` value is modified, it notifies all recorded components ("observers").
+3.  **Selective Re-rendering**: The framework re-renders only the necessary components and sends the minimal HTML delta to the browser over WebSockets.

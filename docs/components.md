@@ -60,6 +60,25 @@ row <= Tag.span("Left")
 row <= Tag.span("Right")
 ```
 
+### Declarative UI (Context Managers)
+
+The preferred way to build complex component trees is using the `with` statement. New tags created inside a `with` block are automatically appended to the parent tag.
+
+```python
+with Tag.div(_class="card"):
+    Tag.h2("Title")
+    with Tag.div(_class="content"):
+        Tag.p("This is automatically added to the content div.")
+```
+
+### Rapid Content Replacement (`.text`)
+
+Use the `.text` property to quickly replace all children of a tag with a single string. This is more efficient for simple text updates.
+
+```python
+self.label.text = "Status: OK"
+```
+
 ## Attributes and Style
 
 Attributes are managed using properties starting with an underscore. This mapping covers all standard and custom HTML attributes.

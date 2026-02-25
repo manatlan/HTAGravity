@@ -16,13 +16,20 @@ Every UI element in htagravity is a component created via `Tag`.
 - Add children using `+=` or the `<=` operator (e.g., `self <= Tag.p("hello")` or `self += Tag.p("hello")`).
 - Use the `.root` property to get a reference to the main `Tag.App` instance (useful for triggering app-level events or modals).
 - Use `.parent` to access the parent component, and `.childs` to access the list of child components.
+- Use `Tag.add(self, child)` or `Tag.add(lambda: ...)` for explicit addition. This is particularly useful when returning components from reactive lambdas, as it ensures they are properly parented even if they're not direct children.
 
 ```python
 from htag import Tag
 
 class MyComponent(Tag.div):
     def init(self, name, **kwargs):
+        # Traditional way:
         self <= Tag.h1(f"Hello {name}")
+        
+        # New Context Manager way (preferred for complex trees):
+        with Tag.div(_class="container"):
+            Tag.h2("Subtitle")
+            Tag.p("Content goes here")
 ```
 
 ### 2. Component Lifecycle
@@ -48,14 +55,32 @@ class Card(Tag.div):
         self.body <= o
 ```
 
-### 3. State & Reactivity
-htagravity uses a "dirty-marking" system for UI updates.
-- **HTML Attributes**: MUST start with `_` to be rendered as HTML attributes.
+### 4. State & Reactivity
+htagravity supports both traditional "dirty-marking" and modern reactive `State`.
+
+**Reactive State (Preferred for data-driven UIs)**:
+- Use `from htag.core import State`.
+- Declare state variables: `self.count = State(0)`.
+- Read state dynamically using lambdas: `Tag.div(lambda: f"Count: {self.count.value}")`.
+- Modify state directly: `self.count.value += 1`.
+- Functional updates: Use `state.set(new_value)` if you need to update state and return the value in a single expression (e.g., inside a lambda): `_onclick=lambda e: self.count.set(self.count.value + 1)`.
+
+**Reactive & Boolean Attributes**:
+- Attributes support lambdas for dynamic updates: `Tag.div(_class=lambda: "active" if self.is_active.value else "hidden")`.
+- Boolean attributes (e.g., `_disabled`, `_checked`, `_required`) are handled automatically:
+    - `True`: Renders the attribute name only (e.g., `disabled`).
+    - `False` or `None`: Omits the attribute entirely.
+
+**Rapid Content Updates**:
+- Use the `.text` property to quickly replace all text content of a tag: `self.my_label.text = "New Status"`. This completely clears existing children and replaces them with a single string.
+
+**Traditional Reactivity (HTML Attributes & Events)**:
+- **HTML Attributes**: MUST start with `_` to be rendered as HTML attributes and trigger updates.
   - Correct: `_class="btn"`, `_src="image.png"`, `_type="checkbox"`
   - Incorrect: `class="btn"`, `src="image.png"`
 - **Events**: Properties starting with `_on` are mapped to Python callbacks.
 
-### 4. Forms & Inputs
+### 5. Forms & Inputs
 htagravity automatically binds input events to Python.
 - For text/number inputs, the current value is accessed safely via event handlers: `val = event.value`
 - For checkboxes/toggles, the framework synchronizes the boolean state. Access it safely using `getattr(self.checkbox, "_value", False)`. Do not use `.value` directly on a checkbox component as it will raise an `AttributeError`.

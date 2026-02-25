@@ -6,14 +6,41 @@ from typing import Any, List, Dict, Optional, Union, Callable, Set, Type
 
 class _HtagLocal(threading.local):
     stack: List['GTag']
+    current_eval: Optional['GTag']  # Track which GTag is evaluating a reactive lambda
 
     def __init__(self):
         super().__init__()
         self.stack = []
+        self.current_eval = None
 
 _ctx = _HtagLocal()
 
 logger = logging.getLogger("htagravity")
+
+class State:
+    def __init__(self, value: Any):
+        self._value = value
+        self._observers: Set['GTag'] = set()
+        
+    @property
+    def value(self) -> Any:
+        # If a GTag is currently evaluating a reactive function, it records itself as an observer
+        if _ctx.current_eval is not None:
+            self._observers.add(_ctx.current_eval)
+        return self._value
+        
+    @value.setter
+    def value(self, new_value: Any) -> None:
+        if self._value != new_value:
+            self._value = new_value
+            # Notify observers
+            for observer in self._observers:
+                if hasattr(observer, "_GTag__dirty"):
+                    setattr(observer, "_GTag__dirty", True)
+
+    def set(self, value: Any) -> Any:
+        self.value = value
+        return value
 
 VOID_ELEMENTS: Set[str] = {
     "area", "base", "br", "col", "embed", "hr", "img", "input",
@@ -27,27 +54,27 @@ class GTag: # aka "Generic Tag"
     def _render_attrs(self) -> str:
         """
         Renders the HTML attributes and events of the tag.
-        Converts python-style underscores to hyphens (e.g., data_id becomes data-id).
-        Always ensures an ID is present for client-side syncing.
+        Handles boolean attributes (True -> key only, False -> omit).
         """
         attrs_list: List[str] = []
         for k, v in self.__attrs.items():
-            # Convert python-style attributes (data_id -> data-id)
             attr_name = k.replace("_", "-")
-            attrs_list.append(f'{attr_name}="{html.escape(str(v))}"')
+            val = self._eval_child(v, stringify=False)
+            
+            if val is True:
+                attrs_list.append(attr_name)
+            elif val is False:
+                continue
+            else:
+                attrs_list.append(f'{attr_name}="{html.escape(str(val))}"')
         
         for name, callback in self.__events.items():
             if isinstance(callback, str):
-                # Literal JS string
                 attrs_list.append(f'on{name}="{html.escape(callback)}"')
             else:
-                # Python callback (wrapped in htag_event)
-                # We check for decorators like @prevent or @stop
                 js = f"htag_event('{self.id}', '{name}', event)"
-                if getattr(callback, "_htag_prevent", False):
-                    js = f"event.preventDefault(); {js}"
-                if getattr(callback, "_htag_stop", False):
-                    js = f"event.stopPropagation(); {js}"
+                if getattr(callback, "_htag_prevent", False): js = f"event.preventDefault(); {js}"
+                if getattr(callback, "_htag_stop", False): js = f"event.stopPropagation(); {js}"
                 attrs_list.append(f'on{name}="{js}"')
 
         attrs = " ".join(attrs_list)
@@ -69,14 +96,16 @@ class GTag: # aka "Generic Tag"
         - kwargs: HTML attributes (prefixed with '_') or events (prefixed with 'on').
         """
         self.__lock = threading.RLock()
-        
-        # Public properties for tree traversal
-        self.childs: List[Union[str, 'GTag']] = []
-        self.parent: Optional['GTag'] = None
         self.__attrs: Dict[str, Any] = {}
         self.__events: Dict[str, Callable] = {}
         self.__dirty = False
         self.__js_calls: List[str] = []
+        self.__rendered_callables: Dict[Callable, List['GTag']] = {}
+        
+        # Public properties for tree traversal
+        self.childs: List[Union[str, 'GTag', Callable]] = []
+        self.parent: Optional['GTag'] = None
+        self.id = "" # placeholder
 
         # If tag is not set by subclass (class attribute), take it from first arg
         if getattr(self, "tag", None) is None:
@@ -100,7 +129,11 @@ class GTag: # aka "Generic Tag"
             else:
                 left_kwargs[k] = v
                 
-        self.init(*args, **left_kwargs)
+        _ctx.stack.append(self)
+        try:
+            self.init(*args, **left_kwargs)
+        finally:
+            _ctx.stack.pop()
 
         if _ctx.stack:
             _ctx.stack[-1].add(self)
@@ -130,9 +163,6 @@ class GTag: # aka "Generic Tag"
             if isinstance(child, GTag):
                 child._trigger_unmount()
 
-        if _ctx.stack:
-            _ctx.stack[-1].add(self)
-
     def add(self, *content: Any) -> 'GTag':
         for item in content:
             if item is None: continue
@@ -150,6 +180,10 @@ class GTag: # aka "Generic Tag"
                         item.parent = self
                         if self.root is not None:
                             item._trigger_mount()
+                    elif callable(item):
+                        # Reactive function (lambda), will be evaluated on render
+                        pass
+                    
                     self.childs.append(item)
                     self.__dirty = True
         return self
@@ -168,7 +202,11 @@ class GTag: # aka "Generic Tag"
         - Attributes starting with 'on' are treated as event callbacks.
         - Setting an HTML attribute or event marks the tag as 'dirty' for client-side update.
         """
-        if name in ["_GTag__lock", "childs", "_GTag__attrs", "_GTag__events", "_GTag__dirty", "_GTag__js_calls", "parent", "tag", "id"]:
+        if name in [
+            "_GTag__lock", "childs", "_GTag__attrs", "_GTag__events", 
+            "_GTag__dirty", "_GTag__js_calls", "_GTag__rendered_callables",
+            "parent", "tag", "id"
+        ]:
             super().__setattr__(name, value)
         elif name.startswith("_on") and (callable(value) or isinstance(value, str)):
             # Event (e.g., self._onclick = my_callback or self._onclick = "alert(1)")
@@ -270,18 +308,47 @@ class GTag: # aka "Generic Tag"
         self.__js_calls.append(script)
         return self
 
-    def __str__(self) -> str:
-        attrs = self._render_attrs()
-        
-        if self.tag in VOID_ELEMENTS:
-            return f"<{self.tag}{attrs}/>"
+    def _eval_child(self, child: Any, stringify: bool = True) -> Any:
+        """Evaluates a child for rendering. If it's a callable, evaluate it recursively and track observers."""
+        if callable(child):
+            old_eval = _ctx.current_eval
+            _ctx.current_eval = self
+            try:
+                res = child()
+            finally:
+                _ctx.current_eval = old_eval
             
-        inner = "".join([str(child) for child in self.childs])
+            # Track GTag objects generated by this callable for event dispatching
+            tags: List['GTag'] = []
+            def collect(item: Any):
+                if isinstance(item, GTag):
+                    item.parent = self
+                    tags.append(item)
+                elif isinstance(item, (list, tuple)):
+                    for i in item: collect(i)
+            collect(res)
+            self.__rendered_callables[child] = tags
+            
+            return self._eval_child(res, stringify) # Recursive call to handle list/tags returned
         
-        if self.tag:
-            return f"<{self.tag}{attrs}>{inner}</{self.tag}>"
-        else:
-            return inner
+        if isinstance(child, (list, tuple)):
+            return "".join(str(self._eval_child(i)) for i in child)
+            
+        return str(child) if stringify else child
+
+    def __str__(self) -> str:
+        """Renders the tag and its children to an HTML string."""
+        with self.__lock:
+            attrs = self._render_attrs()
+            content = "".join(str(self._eval_child(c)) for c in self.childs)
+            
+            if self.tag in VOID_ELEMENTS:
+                return f"<{self.tag}{attrs}/>"
+                
+            if self.tag:
+                return f"<{self.tag}{attrs}>{content}</{self.tag}>"
+            else:
+                return content
 
 def prevent(func: Callable) -> Callable:
     """Decorator to mark an event handler as needing preventDefault()"""

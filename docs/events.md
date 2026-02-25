@@ -63,6 +63,21 @@ def my_generator(e):
     
     time.sleep(2)
     e.target.add("Finished!")
+
+### Async Generators
+
+HTAGravity also supports `async for` generators for asynchronous UI streaming.
+
+```python
+async def my_async_gen(e):
+    e.target.add("Fetching...")
+    yield
+    await asyncio.sleep(2)
+    e.target.add("Data ready!")
+```
+
+> [!TIP]
+> Use generators for any operation that takes more than 100ms to keep the UI responsive and provide feedback to the user.
 ```
 
 ## Event Decorators
@@ -91,4 +106,4 @@ class MyTag(Tag.div):
 
 ---
 
-[← Components](components.md) | [Next: Runners →](runners.md)
+[← Components](components.md) | [Reactivity & State →](reactivity.md) | [Next: Runners →](runners.md)

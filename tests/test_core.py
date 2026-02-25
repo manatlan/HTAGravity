@@ -1,4 +1,4 @@
-from htag.core import GTag, Tag, prevent, stop
+from htag.core import GTag, Tag, prevent, stop, State
 
 def test_gtag_init():
     t = GTag("div", "hello")
@@ -245,3 +245,39 @@ def test_gtag_text_property():
     # Should safely convert non-strings
     t.text = 42
     assert t.text == "42"
+
+def test_gtag_reactive_state():
+    counter = State(0)
+    
+    t = GTag("div")
+    t <= (lambda: f"Count: {counter.value}")
+    
+    assert str(t) == f'<div id="{t.id}">Count: 0</div>'
+    
+    # After rendering once, the div should be observing the state
+    assert t in counter._observers
+    t._GTag__dirty = False
+    
+    # Triggering state change
+    counter.value = 1
+    
+    # Component should be marked dirty automatically
+    assert t._GTag__dirty is True
+    assert str(t) == f'<div id="{t.id}">Count: 1</div>'
+
+def test_gtag_reparenting_and_duplicates():
+    p1 = GTag("div")
+    p2 = GTag("section")
+    c = GTag("span")
+    
+    # Reparenting
+    p1.add(c)
+    assert c.parent == p1
+    p2.add(c) # Should trigger remove_self() on c
+    assert c.parent == p2
+    assert c not in p1.childs
+    
+    # Duplicate add
+    p2.add(c) # Should trigger removal from p2.childs before re-adding
+    assert len(p2.childs) == 1
+    assert p2.childs[0] == c

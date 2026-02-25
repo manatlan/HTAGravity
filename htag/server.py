@@ -269,7 +269,10 @@ class App(GTag):
         return self._app_host.app
 
     def _render_page(self) -> str:
-        # Collect ALL statics from the whole tree on first load
+        # 1. Render the initial body FIRST to populate __rendered_callables
+        body_html = self.render_initial()
+        
+        # 2. Collect ALL statics from the whole tree
         self.sent_statics.clear()
         all_statics: List[str] = []
         self.collect_statics(self, all_statics)
@@ -285,7 +288,7 @@ class App(GTag):
                 <script>{CLIENT_JS}</script>
                 {statics_html}
             </head>
-            {self.render_initial()}
+            {body_html}
         </html>
         """
         return html_content
@@ -407,12 +410,17 @@ class App(GTag):
                 # This tag or one of its attributes changed, we re-render it entirely
                 updates[tag.id] = self.render_tag(tag)
             
-            # ALWAYS check children for JS calls (or deep updates if parent wasn't dirty)
+            # 1. Check static children
             for child in tag.childs:
                 if isinstance(child, GTag):
-                    # If the tag was already added to updates, we don't need its partial HTML,
-                    # but we ALWAYS need its JS calls.
                     self.collect_updates(child, updates, js_calls)
+            
+            # 2. Check dynamic (rendered) children
+            rendered = getattr(tag, "_GTag__rendered_callables", {})
+            for tag_list in rendered.values():
+                for t in tag_list:
+                    self.collect_updates(t, updates, js_calls)
+
             # Extract and clear JS calls
             if getattr(tag, "_GTag__js_calls", []):
                 js_calls.extend(tag._GTag__js_calls)
@@ -431,9 +439,16 @@ class App(GTag):
                 if s_str not in result:
                     result.append(s_str)
         
+        # 1. Traverse static children
         for child in tag.childs:
             if isinstance(child, GTag):
                 self.collect_statics(child, result)
+        
+        # 2. Traverse dynamic (rendered) children
+        rendered = getattr(tag, "_GTag__rendered_callables", {})
+        for tag_list in rendered.values():
+            for t in tag_list:
+                self.collect_statics(t, result)
 
     async def handle_event(self, msg: Dict[str, Any], ws: Optional[WebSocket]) -> None:
         tag_id = msg.get("id")
@@ -576,12 +591,23 @@ class App(GTag):
         return str(tag)
 
     def find_tag(self, root: GTag, tag_id: str) -> Optional[GTag]:
+        """Recursively find a tag by its ID, searching both static and dynamic (reactive) children."""
         if root.id == tag_id:
             return root
+        
+        # 1. Search in static children
         for child in root.childs:
             if isinstance(child, GTag):
                 found = self.find_tag(child, tag_id)
                 if found: return found
+                
+        # 2. Search in dynamic (rendered from callables) children
+        rendered = getattr(root, "_GTag__rendered_callables", {})
+        for tag_list in rendered.values():
+            for t in tag_list:
+                found = self.find_tag(t, tag_id)
+                if found: return found
+                
         return None
 
 

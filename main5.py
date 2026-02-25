@@ -34,22 +34,29 @@ class Button(Tag.button):
 class Card(Tag.div):
     """A reusable card container component."""
     def init(self, title=None, **kwargs):
-
+        # 1. Initialize logic/styles
         self._class = "bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden"
         if "_class" in kwargs:
              self._class += f" {kwargs['_class']}"
-             
-        # Add a header if a title is provided
-        if title:
-            header = Tag.div(title, _class="px-6 py-4 border-b border-slate-100 font-semibold text-lg text-slate-800 bg-slate-50")
-            Tag.div.add(self, header)
-            
-        # The content area where children will be added
+
+        # 2. Create body FIRST (so it's available for auto-adding children)
         self.body = Tag.div(_class="p-6")
         Tag.div.add(self, self.body)
 
+        # 3. Add header if needed
+        if title:
+            header = Tag.div(title, _class="px-6 py-4 border-b border-slate-100 font-semibold text-lg text-slate-800 bg-slate-50")
+            # Explicitly add to self (Card), not body (via override add)
+            Tag.div.add(self, header)
+            # Re-ensure body is after header in child list
+            self.body.remove_self()
+            Tag.div.add(self, self.body)
+
     # Override the default append behavior to add to the card body instead of the main wrapper
     def add(self, o):
+         if not hasattr(self, "body"):
+             # During initialization, if body isn't ready, fallback to normal add
+             return Tag.div.add(self, o)
          self.body <= o
 
 class Badge(Tag.span):
@@ -220,15 +227,14 @@ class Table(Tag.div):
 class ProgressBar(Tag.div):
     """A simple progress bar component."""
     def init(self, progress=0, color="blue", **kwargs):
-        self.progress = max(0, min(100, progress)) # Clamp between 0 and 100
         self._class = "w-full bg-gray-200 rounded-full h-2.5 mb-4 dark:bg-gray-700"
         
-        self.bar = Tag.div(_class=f"bg-{color}-600 h-2.5 rounded-full transition-all duration-300", _style=f"width: {self.progress}%")
-        self <= self.bar
-        
-    def set_value(self, value):
-        self.progress = max(0, min(100, value))
-        self.bar._style = f"width: {self.progress}%"
+        # Internal div for the bar itself, with reactive width
+        Tag.div(
+            _class=f"bg-{color}-600 h-2.5 rounded-full transition-all duration-300", 
+            _style=lambda: f"width: {self._eval_child(progress)}%"
+        )
+
 
 class CodeBlock(Tag.div):
     """A styled container to display code snippets."""
@@ -469,6 +475,12 @@ class Dropdown(Tag.div):
 # APP : Main Application Flow
 # ====================================================================
 
+from htag.core import State
+
+# ====================================================================
+# APP : Main Application Flow
+# ====================================================================
+
 class DemoApp(Tag.App):
     # Using Tailwind Play CDN for prototyping (In production, you'd use a compiled CSS file)
     statics = [
@@ -477,284 +489,165 @@ class DemoApp(Tag.App):
     ]
 
     def init(self):
-        self.counter = 0
+        # 1. State Initialization
+        self.count = State(0)
+        self.user_name = State("")
+        self.dark_mode = State(False)
+        self.progress = State(30)
+        self.is_loading = State(False)
 
-        # Main Layout Container
-        container = Tag.div(_class="min-h-screen p-8 flex flex-col items-center justify-center")
-        self <= container
+        # 2. Declarative Layout (Zero-Boilerplate)
+        with Tag.div(_class="min-h-screen p-8 flex flex-col items-center justify-center"):
+            
+            with Tag.div(_class="text-center mb-10"):
+                Tag.h1("Tailwind Components Demo", _class="text-4xl font-extrabold text-slate-900 tracking-tight")
+                Tag.p("htagravity + Tailwind CSS in action", _class="mt-2 text-lg text-slate-600")
 
-        # ... (Title is inside container)
-        title_wrapper = Tag.div(_class="text-center mb-10")
-        title_wrapper <= Tag.h1("Tailwind Components Demo", _class="text-4xl font-extrabold text-slate-900 tracking-tight")
-        title_wrapper <= Tag.p("htagravity + Tailwind CSS in action", _class="mt-2 text-lg text-slate-600")
-        container <= title_wrapper
+            # Create a Grid for our Cards
+            with Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl"):
+                
+                # --- Card 1: Counter Example ---
+                with Card(title="Counter Example"):
+                    # Reactive Counter Display
+                    Tag.div(
+                        lambda: str(self.count.value), 
+                        _class=lambda: "text-5xl font-bold text-center mb-6 " + (
+                            "text-red-600" if self.count.value < 0 else 
+                            "text-green-600" if self.count.value > 0 else 
+                            "text-blue-600"
+                        )
+                    )
+                    
+                    with Tag.div(_class="flex justify-center gap-4"):
+                        Button("-1", variant="secondary", _onclick=lambda e: self.count.set(self.count.value - 1))
+                        Button("+1", variant="primary", _onclick=lambda e: self.count.set(self.count.value + 1))
+                        Button("Reset", variant="danger", _onclick=lambda e: self.count.set(0))
 
-        # Create a Grid for our Cards
-        grid = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl")
-        container <= grid
+                # --- Card 2: Status Indicators ---
+                with Card(title="Status Indicators"):
+                    Tag.p("This card demonstrates reusable non-interactive elements.", _class="text-slate-600 mb-4")
+                    with Tag.div(_class="flex flex-wrap gap-2 mb-6"):
+                        Badge("New", "green")
+                        Badge("Processing", "yellow")
+                        Badge("Error", "red")
+                        Badge("v1.2.0", "blue")
+                    Button("Acknowledge", variant="primary", _class="w-full", _onclick=lambda e: e.target.call_js("alert('Acknowledged!')"))
+                
+                # --- Card 3: Interactive Forms ---
+                with Card(title="Interactive Elements", _class="md:col-span-1 border-t-4 border-t-purple-500"):
+                    with Tag.div(_class="flex flex-col gap-6"):
+                        # Text input example
+                        with Tag.div(_class="flex flex-col gap-2"):
+                            Tag.label("Your Name", _class="text-sm font-medium text-gray-700")
+                            Input(placeholder="Type your name...", _oninput=lambda e: self.user_name.set(e.value))
+                            # Hello message is purely reactive
+                            Tag.div(
+                                lambda: f"Hello, {self.user_name.value}!" if self.user_name.value else "Hello, stranger!",
+                                _class=lambda: "text-sm mt-1 " + ("text-blue-600 font-medium" if self.user_name.value else "text-gray-500")
+                            )
+                        
+                        # Toggle example
+                        with Tag.div(_class="flex items-center justify-between mt-2 pt-4 border-t border-gray-100"):
+                            Toggle("Enable Dark Text", _onchange=lambda e: self.dark_mode.set(e.target.value))
+                        
+                        # Alert area is reactive to the toggle
+                        Tag.div(lambda: 
+                            Alert("Feature activated! This would normally switch themes.", variant="success") if self.dark_mode.value else 
+                            Alert("Feature disabled. Back to normal.", variant="warning")
+                        )
 
-        # --- Card 1: Counter Example ---
-        counter_card = Card(title="Counter Example")
-        
-        self.counter_display = Tag.div(str(self.counter), _class="text-5xl font-bold text-center text-blue-600 mb-6")
-        counter_card.add(self.counter_display)
-        
-        btn_group = Tag.div(_class="flex justify-center gap-4")
-        btn_group <= Button("-1", variant="secondary", _onclick=self.decrement)
-        btn_group <= Button("+1", variant="primary", _onclick=self.increment)
-        btn_group <= Button("Reset", variant="danger", _onclick=self.reset)
-        
-        counter_card.add(btn_group)
-        grid <= counter_card
+                # --- Card 4: Table Data ---
+                with Card(title="Data Table", _class="md:col-span-2"):
+                    Table(
+                        headers = ["Nom", "Rôle", "Statut", "Action"],
+                        rows = [
+                            ["Alice Dupont", "Admin", Badge("Actif", "green"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
+                            ["Bob Martin", "User", Badge("Inactif", "gray"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
+                            ["Charlie", "Editor", Badge("Review", "yellow"), Button("Editer", "secondary", _class="text-xs py-1 px-2")]
+                        ]
+                    )
 
-        # --- Card 2: Badges & Static Components ---
-        info_card = Card(title="Status Indicators")
-        info_card.add(Tag.p("This card demonstrates reusable non-interactive elements.", _class="text-slate-600 mb-4"))
-        
-        badge_group = Tag.div(_class="flex flex-wrap gap-2 mb-6")
-        badge_group <= Badge("New", "green")
-        badge_group <= Badge("Processing", "yellow")
-        badge_group <= Badge("Error", "red")
-        badge_group <= Badge("v1.2.0", "blue")
-        info_card.add(badge_group)
-        
-        info_card.add(Button("Acknowledge", variant="primary", _class="w-full", _onclick=lambda e: e.target.call_js("alert('Acknowledged!')")))
-        grid <= info_card
-        
-        # --- Card 3: Interactive Forms ---
-        form_card = Card(title="Interactive Elements", _class="md:col-span-1 border-t-4 border-t-purple-500") # Span across both columns
-        
-        form_layout = Tag.div(_class="flex flex-col gap-6")
-        
-        # Text input example
-        input_group = Tag.div(_class="flex flex-col gap-2")
-        input_group <= Tag.label("Your Name", _class="text-sm font-medium text-gray-700")
-        self.name_input = Input(placeholder="Type your name...", _oninput=self.on_type)
-        input_group <= self.name_input
-        self.hello_msg = Tag.div("Hello, stranger!", _class="text-sm text-gray-500 mt-1")
-        input_group <= self.hello_msg
-        form_layout <= input_group
-        
-        # Toggle example
-        toggle_group = Tag.div(_class="flex items-center justify-between mt-2 pt-4 border-t border-gray-100")
-        self.theme_toggle = Toggle("Enable Dark Text", _onchange=self.on_toggle)
-        toggle_group <= self.theme_toggle
-        form_layout <= toggle_group
-        
-        # Alert area
-        self.alert_area = Tag.div(_class="mt-4")
-        form_layout <= self.alert_area
-        
-        form_card.add(form_layout)
-        grid <= form_card
+                # --- Card 5: Modals ---
+                with Card(title="Modals & Dialogs", _class="md:col-span-2"):
+                    with Tag.div(_class="flex gap-4 p-4 items-center justify-center"):
+                        Button("Show Info Modal", "primary", _onclick=lambda e: self.info_modal.open_modal())
+                        Button("Show Danger Modal", "danger", _onclick=lambda e: self.danger_modal.open_modal())
+                        Button("Show Advanced Modal", "info", _onclick=lambda e: self.advanced_modal.show())
 
-        # --- Card 4: Table Data ---
-        table_card = Card(title="Data Table", _class="md:col-span-2")
-        headers = ["Nom", "Rôle", "Statut", "Action"]
-        rows = [
-            ["Alice Dupont", "Admin", Badge("Actif", "green"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
-            ["Bob Martin", "User", Badge("Inactif", "gray"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
-            ["Charlie", "Editor", Badge("Review", "yellow"), Button("Editer", "secondary", _class="text-xs py-1 px-2")]
-        ]
-        table_card.add(Table(headers, rows))
-        grid <= table_card
-        
-        # --- Card 5: Modals / Dialogs ---
-        dialog_card = Card(title="Modals & Dialogs", _class="md:col-span-2")
-        dialog_group = Tag.div(_class="flex gap-4 p-4 items-center justify-center")
-        dialog_group <= Button("Show Info Modal", "primary", _onclick=lambda e: self.info_modal.open_modal())
-        dialog_group <= Button("Show Danger Modal", "danger", _onclick=lambda e: self.danger_modal.open_modal())
-        dialog_group <= Button("Show Advanced Modal", "info", _onclick=lambda e: self.advanced_modal.show())
-        dialog_card.add(dialog_group)
-        grid <= dialog_card
-        
-        # Initialize Modals (attached to main container, but hidden)
-        self.info_modal = MessageBox("Nouvelle Fonctionnalité", "Les boîtes de dialogue modales sont maintenant disponibles en htag avec Tailwind CSS !", type="info")
-        self.danger_modal = MessageBox("Action Irréversible", "Êtes-vous sûr de vouloir supprimer cet élément ? Cette action ne peut pas être annulée.", type="danger")
-        
-        self.advanced_modal = Modal("Composant Modal Avancé", Tag.div(
-            Tag.p("Ce modal est plus générique. Vous pouvez y mettre n'importe quel contenu htag.", _class="text-gray-600 mb-4"),
-            Tag.div(
-                Tag.p("C'est une div imbriquée avec ses propres styles.", _class="text-sm text-blue-800 mb-2"),
-                Tag.div(_class="flex gap-2").add(Badge("Info", "blue"), Badge("Nouveau", "green")),
-                _class="bg-blue-50 p-4 rounded-lg border border-blue-100"
-            ),
-            Button("Fermer ce modal", variant="secondary", _class="mt-6 w-full", _onclick=lambda e: self.advanced_modal.hide())
-        ))
-        
-        container <= self.info_modal
-        container <= self.danger_modal
-        container <= self.advanced_modal
+                # --- Card 6: Utils ---
+                with Card(title="Utilities & Feedback", _class="md:col-span-2"):
+                    with Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8"):
+                        with Tag.div():
+                            Tag.h3("Task Progress", _class="text-sm font-semibold text-gray-700 mb-2")
+                            # Progress bar is now fully reactive by passing a lambda
+                            ProgressBar(progress=lambda: self.progress.value, color="blue")
+                            with Tag.div(_class="flex gap-2 mt-4"):
+                                Button("+10%", "secondary", _onclick=lambda e: self.progress.set(min(100, self.progress.value + 10)))
+                                Button("Reset", "danger", _class="ml-auto", _onclick=lambda e: self.progress.set(0))
+                        
+                        with Tag.div():
+                            Tag.h3("Code Snippet", _class="text-sm font-semibold text-gray-700 mb-2")
+                            CodeBlock('def hello_world():\n    print("Hello from HTAGGravity!")', language="python")
 
-        # --- Card 6: Utils (Progress & Code) ---
-        utils_card = Card(title="Utilities & Feedback", _class="md:col-span-2")
-        utils_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
-        
-        # Progress section
-        prog_section = Tag.div()
-        prog_section <= Tag.h3("Task Progress", _class="text-sm font-semibold text-gray-700 mb-2")
-        self.prog_bar = ProgressBar(progress=30, color="blue")
-        prog_section <= self.prog_bar
-        
-        prog_btns = Tag.div(_class="flex gap-2 mt-4")
-        prog_btns <= Button("+10%", "secondary", _onclick=self.increase_progress)
-        prog_btns <= Button("Reset", "danger", _class="ml-auto", _onclick=self.reset_progress)
-        prog_section <= prog_btns
-        utils_layout <= prog_section
-        
-        # Code block section
-        code_section = Tag.div()
-        code_section <= Tag.h3("Code Snippet", _class="text-sm font-semibold text-gray-700 mb-2")
-        code_section <= CodeBlock('def hello_world():\n    print("Hello from HTAGravity!")', language="python")
-        utils_layout <= code_section
-        
-        utils_card.add(utils_layout)
-        grid <= utils_card
+                # --- Card 7: Advanced ---
+                with Card(title="Advanced Components", _class="md:col-span-2"):
+                    with Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8"):
+                        with Tag.div():
+                            Tag.h3("Accordions / Expansion Panels", _class="text-sm font-semibold text-gray-700 mb-4")
+                            Accordion("What is HTAGGravity?", "HTAGravity is a lightweight, pure Python framework for building modern web applications without writing JavaScript.", is_open=True)
+                            Accordion("Why use Tailwind CSS?", "Tailwind allows you to rapidly build custom user interfaces by composing utility classes directly in your markup, keeping CSS files small.")
+                        
+                        with Tag.div():
+                            Tag.h3("Loading States", _class="text-sm font-semibold text-gray-700 mb-4")
+                            with Tag.div(_class="flex items-center gap-6 p-4 rounded-lg border border-dashed border-gray-300 bg-gray-50"):
+                                Tag.div([Spinner("sm", "red"), Tag.span("Small", _class="text-xs text-gray-500 mt-2 block text-center")])
+                                Tag.div([Spinner("md", "blue"), Tag.span("Medium", _class="text-xs text-gray-500 mt-2 block text-center")])
+                                Tag.div([Spinner("lg", "green"), Tag.span("Large", _class="text-xs text-gray-500 mt-2 block text-center")])
+                            
+                            with Button("Save Changes", variant="primary", _class="mt-4 flex items-center justify-center gap-2", 
+                                       _disabled=lambda: self.is_loading.value,
+                                       _onclick=self.fake_loading) as btn:
+                                # Reactive spinner inside button
+                                Tag.span(lambda: Spinner("sm", "white") if self.is_loading.value else "")
 
-        # --- Card 7: Advanced / Extras ---
-        extra_card = Card(title="Advanced Components", _class="md:col-span-2")
-        extra_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
-        
-        # Accordion demo
-        acc_section = Tag.div()
-        acc_section <= Tag.h3("Accordions / Expansion Panels", _class="text-sm font-semibold text-gray-700 mb-4")
-        acc_section <= Accordion("What is HTAGravity?", "HTAGravity is a lightweight, pure Python framework for building modern web applications without writing JavaScript.", is_open=True)
-        acc_section <= Accordion("Why use Tailwind CSS?", "Tailwind allows you to rapidly build custom user interfaces by composing utility classes directly in your markup, keeping CSS files small.")
-        extra_layout <= acc_section
-        
-        # Spinner / Loading demo
-        spin_section = Tag.div()
-        spin_section <= Tag.h3("Loading States", _class="text-sm font-semibold text-gray-700 mb-4")
-        
-        spin_flex = Tag.div(_class="flex items-center gap-6 p-4 rounded-lg border border-dashed border-gray-300 bg-gray-50")
-        spin_flex <= Tag.div(Spinner("sm", "red"), Tag.span("Small", _class="text-xs text-gray-500 mt-2 block text-center"))
-        spin_flex <= Tag.div(Spinner("md", "blue"), Tag.span("Medium", _class="text-xs text-gray-500 mt-2 block text-center"))
-        spin_flex <= Tag.div(Spinner("lg", "green"), Tag.span("Large", _class="text-xs text-gray-500 mt-2 block text-center"))
-        
-        spin_section <= spin_flex
-        
-        # Button with loader
-        btn_loader = Button("Save Changes", variant="primary", _class="mt-4 flex items-center justify-center gap-2", _onclick=self.fake_loading)
-        # Add a placeholder for a small spinner
-        self.btn_spinner_area = Tag.span("")
-        btn_loader <= self.btn_spinner_area
-        spin_section <= btn_loader
-        
-        extra_layout <= spin_section
-        
-        extra_card.add(extra_layout)
-        grid <= extra_card
-        
-        # --- Card 8: Tabs & Dropdowns (Newly Added!) ---
-        new_card = Card(title="Navigation & Menus", _class="md:col-span-2 border-t-4 border-t-teal-500")
-        new_layout = Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8")
-        
-        # Tabs
-        tab_section = Tag.div()
-        tab_section <= Tag.h3("Tabs Panel", _class="text-sm font-semibold text-gray-700 mb-4")
-        
-        tab_content1 = Tag.div(Tag.h4("Profil Utilisateur", _class="font-bold mb-2"), Tag.p("Gérez vos informations personnelles ici. Les tabs permettent de diviser les vues sans tout recharger.", _class="text-sm text-gray-600"))
-        tab_content2 = Tag.div(Tag.h4("Sécurité", _class="font-bold mb-2"), Tag.p("Paramètres de mot de passe et 2FA.", _class="text-sm text-gray-600"))
-        
-        tabs = Tabs({
-            "Profil": tab_content1,
-            "Sécurité": tab_content2,
-            "Notifications": "Aucune nouvelle notification pour le moment."
-        })
-        tab_section <= tabs
-        new_layout <= tab_section
-        
-        # Dropdown & Toasts
-        action_section = Tag.div()
-        action_section <= Tag.h3("Menus & Toasts", _class="text-sm font-semibold text-gray-700 mb-4")
-        
-        # The toaster anchor
-        self.toaster = Tag.div(_class="fixed bottom-5 right-5 z-50 flex flex-col gap-2")
-        container <= self.toaster # add to main layout
-        
-        dropdown_items = [
-            ("Déclencher un Toast Succès", lambda e: self.fire_toast("Opération réussie !", "success")),
-            ("Déclencher une Alerte", lambda e: self.fire_toast("Ceci est une erreur importante", "error")),
-            ("Option inerte", None)
-        ]
-        
-        action_section <= Dropdown("Actions Rapides", dropdown_items)
-        action_section <= Tag.p("Cliquez sur le dropdown pour déclencher un toast éphémère. Il disparaîtra tout seul après 3 secondes gràce à asyncio !", _class="mt-4 text-xs text-gray-500")
-        
-        new_layout <= action_section
-        new_card.add(new_layout)
-        grid <= new_card
+                # --- Card 8: Tabs & Dropdowns ---
+                with Card(title="Navigation & Menus", _class="md:col-span-2 border-t-4 border-t-teal-500"):
+                    with Tag.div(_class="grid grid-cols-1 md:grid-cols-2 gap-8"):
+                        with Tag.div():
+                            Tag.h3("Tabs Panel", _class="text-sm font-semibold text-gray-700 mb-4")
+                            Tabs({
+                                "Profil": Tag.div([Tag.h4("Profil Utilisateur", _class="font-bold mb-2"), Tag.p("Gérez vos informations personnelles ici.", _class="text-sm text-gray-600")]),
+                                "Sécurité": Tag.div([Tag.h4("Sécurité", _class="font-bold mb-2"), Tag.p("Paramètres de mot de passe et 2FA.", _class="text-sm text-gray-600")]),
+                                "Notifications": "Aucune nouvelle notification pour le moment."
+                            })
+                        
+                        with Tag.div():
+                            Tag.h3("Menus & Toasts", _class="text-sm font-semibold text-gray-700 mb-4")
+                            Dropdown("Actions Rapides", [
+                                ("Déclencher un Toast Succès", lambda e: self.fire_toast("Opération réussie !", "success")),
+                                ("Déclencher une Alerte", lambda e: self.fire_toast("Ceci est une erreur importante", "error")),
+                                ("Option inerte", None)
+                            ])
+                            Tag.p("Cliquez sur le dropdown pour déclencher un toast éphémère.", _class="mt-4 text-xs text-gray-500")
 
-    # --- Actions (Event Handlers) ---
+            # 3. Floating components
+            self.info_modal = MessageBox("Nouvelle Fonctionnalité", "Les boîtes de dialogue modales sont maintenant disponibles !", type="info")
+            self.danger_modal = MessageBox("Action Irréversible", "Êtes-vous sûr de vouloir supprimer cet élément ?", type="danger")
+            self.advanced_modal = Modal("Composant Modal Avancé", Tag.div([
+                Tag.p("Ce modal est plus générique. Vous pouvez y mettre n'importe quel contenu htag.", _class="text-gray-600 mb-4"),
+                Button("Fermer ce modal", variant="secondary", _class="mt-6 w-full", _onclick=lambda e: self.advanced_modal.hide())
+            ]))
+            self.toaster = Tag.div(_class="fixed bottom-5 right-5 z-50 flex flex-col gap-2")
+
     def fire_toast(self, message, variant="success"):
         self.toaster <= Toast(message, variant)
-    def on_type(self, event):
-        # We read the value either from event context or directly from the synced input component
-        val = event.value
-        self.hello_msg.clear()
-        if val:
-            self.hello_msg <= f"Hello, {val}!"
-            self.hello_msg._class = "text-sm text-blue-600 font-medium mt-1"
-        else:
-            self.hello_msg <= "Hello, stranger!"
-            self.hello_msg._class = "text-sm text-gray-500 mt-1"
-            
-    def on_toggle(self, event):
-        # The htagravity framework doesn't send "checked", it sends "value", so for a checkbox
-        # we check the internal value (which we added a property for)
-        is_on = self.theme_toggle.value
-        self.alert_area.clear() # Clear any existing alert
-        
-        if is_on:
-            self.alert_area <= Alert("Feature activated! This would normally switch themes.", variant="success")
-        else:
-             self.alert_area <= Alert("Feature disabled. Back to normal.", variant="warning")
 
-    def increment(self, event):
-        self.counter += 1
-        self.update_display()
-
-    def decrement(self, event):
-        self.counter -= 1
-        self.update_display()
-
-    def reset(self, event):
-        self.counter = 0
-        self.update_display()
-        
-    def increase_progress(self, event):
-        self.prog_bar.set_value(self.prog_bar.progress + 10)
-        
-    def reset_progress(self, event):
-        self.prog_bar.set_value(0)
-
-    def update_display(self):
-        self.counter_display.clear()
-        self.counter_display += str(self.counter)
-        if self.counter < 0:
-            self.counter_display._class = "text-5xl font-bold text-center text-red-600 mb-6"
-        elif self.counter > 0:
-            self.counter_display._class = "text-5xl font-bold text-center text-green-600 mb-6"
-        else:
-             self.counter_display._class = "text-5xl font-bold text-center text-blue-600 mb-6"
-             
     async def fake_loading(self, event):
-        # We start the loader
-        btn = event.target
-        self.btn_spinner_area.clear()
-        self.btn_spinner_area <= Spinner("sm", "white")
-        btn.call_js("this.disabled = true;")
-        
-        yield # Force UI update to show the spinner
-        
-        # Simulate network request
+        self.is_loading.set(True)
+        yield
         await asyncio.sleep(2)
-        
-        # Reset
-        self.btn_spinner_area.clear()
-        btn.call_js("this.disabled = false;")
-        self.alert_area.clear()
-        self.alert_area <= Alert("Saved successfully!", variant="success")
+        self.is_loading.set(False)
+        self.fire_toast("Sauvegardé avec succès !")
 
 
 if __name__ == "__main__":

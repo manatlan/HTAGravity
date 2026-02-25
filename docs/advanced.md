@@ -37,7 +37,7 @@ class StyledComponent(Tag.div):
 
 `htag` ensures that statics are:
 
-- Collected recursively from all active tags.
+- Collected recursively from all active tags, including those created dynamically via reactive lambdas.
 - Sent to the client only once per session.
 - Injected into the `<head>` dynamically if they are added after the initial load.
 
