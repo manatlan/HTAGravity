@@ -190,6 +190,7 @@ def test_gtag_le():
     
     child = GTag("span")
     t <= child
+<<<<<<< HEAD
     assert child in t.childs
     assert child.parent == t
 
@@ -214,3 +215,23 @@ def test_gtag_root():
     unattached += unattached_child
     assert unattached.root is None
     assert unattached_child.root is None
+=======
+    assert child in t._childs
+    assert child._parent == t
+
+def test_gtag_context_manager():
+    with GTag("div") as root:
+        with GTag("ul"):
+            GTag("li", "first")
+            GTag("li", "second")
+    
+    assert root.tag == "div"
+    assert len(root._childs) == 1
+    ul = root._childs[0]
+    assert ul.tag == "ul"
+    assert len(ul._childs) == 2
+    assert ul._childs[0].tag == "li"
+    assert "first" in ul._childs[0]._childs
+    assert ul._childs[1].tag == "li"
+    assert "second" in ul._childs[1]._childs
+>>>>>>> adfe9ef (feat: Introduce GTag context manager for declarative UI composition and automatic parent-child linking.)

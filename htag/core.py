@@ -1,9 +1,17 @@
 import html
-import uuid
 import json
 import threading
 import logging
 from typing import Any, List, Dict, Optional, Union, Callable, Set, Type
+
+class _HtagLocal(threading.local):
+    stack: List['GTag']
+
+    def __init__(self):
+        super().__init__()
+        self.stack = []
+
+_ctx = _HtagLocal()
 
 logger = logging.getLogger("htagravity")
 
@@ -46,6 +54,13 @@ class GTag: # aka "Generic Tag"
         if attrs: attrs = " " + attrs
         attrs += f' id="{self.id}"'
         return attrs
+
+    def __enter__(self):
+        _ctx.stack.append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        _ctx.stack.pop()
 
     def __init__(self, *args: Any, **kwargs: Any):
         """
@@ -112,7 +127,11 @@ class GTag: # aka "Generic Tag"
             if isinstance(child, GTag):
                 child._trigger_unmount()
 
+        if _ctx.stack:
+            _ctx.stack[-1].add(self)
+
     def add(self, *content: Any) -> 'GTag':
+<<<<<<< HEAD
         with self.__lock:
             for item in content:
                 if item is None: continue
@@ -125,6 +144,24 @@ class GTag: # aka "Generic Tag"
                         if self.root is not None:
                             item._trigger_mount()
             self.__dirty = True
+=======
+        for item in content:
+            if item is None: continue
+            if isinstance(item, (list, tuple)):
+                self.add(*item)
+            else:
+                if isinstance(item, GTag):
+                    if item._parent is not None and item._parent is not self:
+                        item.remove_self()
+
+                with self._lock:
+                    if isinstance(item, GTag):
+                        if item in self._childs:
+                            self._childs.remove(item)
+                        item._parent = self
+                    self._childs.append(item)
+                    self._dirty = True
+>>>>>>> adfe9ef (feat: Introduce GTag context manager for declarative UI composition and automatic parent-child linking.)
         return self
 
     def __iadd__(self, other: Any) -> 'GTag':
@@ -200,6 +237,7 @@ class GTag: # aka "Generic Tag"
         return None
 
     def clear(self) -> 'GTag':
+<<<<<<< HEAD
         with self.__lock:
             if self.root is not None:
                 for child in self.childs:
@@ -208,6 +246,14 @@ class GTag: # aka "Generic Tag"
                         child.parent = None
             self.childs = []
             self.__dirty = True
+=======
+        with self._lock:
+            for child in self._childs:
+                if isinstance(child, GTag):
+                    child._parent = None
+            self._childs = []
+            self._dirty = True
+>>>>>>> adfe9ef (feat: Introduce GTag context manager for declarative UI composition and automatic parent-child linking.)
         return self
 
     def add_class(self, name: str) -> 'GTag':
