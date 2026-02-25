@@ -2,6 +2,7 @@ import html
 import json
 import threading
 import logging
+import weakref
 from typing import Any, List, Dict, Optional, Union, Callable, Set, Type
 
 class _HtagLocal(threading.local):
@@ -20,7 +21,7 @@ logger = logging.getLogger("htagravity")
 class State:
     def __init__(self, value: Any):
         self._value = value
-        self._observers: Set['GTag'] = set()
+        self._observers: weakref.WeakSet['GTag'] = weakref.WeakSet()
         
     @property
     def value(self) -> Any:
@@ -35,8 +36,7 @@ class State:
             self._value = new_value
             # Notify observers
             for observer in self._observers:
-                if hasattr(observer, "_GTag__dirty"):
-                    setattr(observer, "_GTag__dirty", True)
+                observer._GTag__dirty = True
 
     def set(self, value: Any) -> Any:
         self.value = value
@@ -283,6 +283,7 @@ class GTag: # aka "Generic Tag"
                         child._trigger_unmount()
                     child.parent = None
             self.childs = []
+            self._GTag__rendered_callables = {}
             self.__dirty = True
         return self
 
