@@ -2,7 +2,55 @@ import os
 import sys
 import html
 from pathlib import Path
-from htag import Tag, ChromeApp, GTag
+from htag import Tag, ChromeApp, State
+
+class Sidebar(Tag.div):
+    """Navigation sidebar for quick access."""
+    statics = [
+        Tag.style("""
+            .sidebar {
+                width: 200px;
+                padding: 16px;
+                background: rgba(0,0,0,0.15);
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                border-right: 1px solid rgba(255,255,255,0.05);
+            }
+            .sidebar-title {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: var(--text-dim);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 8px;
+                padding-left: 8px;
+            }
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 10px 12px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.2s;
+                font-size: 0.9rem;
+                color: var(--text);
+            }
+            .nav-item:hover {
+                background: var(--hover);
+                color: var(--primary);
+            }
+        """)
+    ]
+    def init(self, go_to_callback):
+        self._class = "sidebar"
+        self <= Tag.div("Favorites", _class="sidebar-title")
+        
+        # Shortcuts
+        self <= Tag.div("🏠 Home", _class="nav-item", _onclick=lambda e: go_to_callback(Path.home()))
+        self <= Tag.div("📂 Root", _class="nav-item", _onclick=lambda e: go_to_callback(Path("/")))
+        self <= Tag.div("💻 Current", _class="nav-item", _onclick=lambda e: go_to_callback(Path.cwd()))
 
 class Explorer(Tag.div):
     """Component responsible for listing files and folders."""
@@ -13,46 +61,51 @@ class Explorer(Tag.div):
                 overflow-y: auto;
                 padding: 24px;
                 display: grid;
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-                gap: 12px;
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+                gap: 16px;
                 align-content: start;
-                border-right: 1px solid rgba(255,255,255,0.05);
             }
             .item {
                 display: flex;
+                flex-direction: column;
                 align-items: center;
-                padding: 12px 16px;
+                padding: 20px 12px;
                 background: var(--surface);
-                border-radius: 10px;
+                border-radius: 12px;
                 cursor: pointer;
                 transition: all 0.2s;
                 border: 1px solid rgba(255,255,255,0.05);
+                text-align: center;
             }
             .item:hover {
                 background: var(--hover);
                 border-color: var(--primary);
+                transform: translateY(-2px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
             }
             .item.selected {
-                background: rgba(129, 193, 223, 0.2);
+                background: rgba(129, 193, 223, 0.15);
                 border-color: var(--primary);
-                box-shadow: 0 0 10px rgba(129, 193, 223, 0.2);
+                box-shadow: 0 0 15px rgba(129, 193, 223, 0.2);
             }
             .icon {
-                width: 32px;
-                height: 32px;
-                border-radius: 8px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                margin-right: 12px;
-                font-size: 1.2rem;
-                background: rgba(0,0,0,0.2);
+                font-size: 2.5rem;
+                margin-bottom: 12px;
+                filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
             }
             .item.folder .icon { color: var(--accent); }
             .item.file .icon { color: var(--primary); }
-            .item .info { flex: 1; min-width: 0; }
-            .item .name { display: block; font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-            .item .details { display: block; font-size: 0.7rem; color: var(--text-dim); }
+            .item .info { width: 100%; }
+            .item .name { 
+                display: block; 
+                font-weight: 500; 
+                font-size: 0.85rem; 
+                white-space: nowrap; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                color: var(--text);
+            }
+            .item .details { display: block; font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
         """)
     ]
 
@@ -93,7 +146,7 @@ class Explorer(Tag.div):
                 div <= info
                 self <= div
         except Exception as e:
-            self <= Tag.div(f"Error: {e}", _style="color: #ff6b6b; padding: 20px")
+            self <= Tag.div(f"Error: {e}", _style="color: #ff6b6b; padding: 20px; grid-column: 1/-1")
 
     def format_size(self, size):
         for unit in ['B', 'KB', 'MB', 'GB']:
@@ -106,20 +159,22 @@ class Viewer(Tag.div):
     statics = [
         Tag.style("""
             .preview-panel {
-                width: 450px;
+                width: 500px;
                 background: var(--surface);
                 display: flex;
                 flex-direction: column;
-                border-left: 1px solid rgba(129,193,223,0.2);
-                animation: slideIn 0.3s ease-out;
+                border-left: 1px solid rgba(129,193,223,0.3);
+                animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
                 height: 100%;
+                box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+                z-index: 50;
             }
             @keyframes slideIn {
-                from { transform: translateX(100%); }
-                to { transform: translateX(0); }
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
             }
             .preview-header {
-                padding: 16px 24px;
+                padding: 20px 24px;
                 background: var(--surface-light);
                 display: flex;
                 align-items: center;
@@ -128,34 +183,42 @@ class Viewer(Tag.div):
             }
             .preview-title {
                 font-weight: 600;
-                font-size: 0.9rem;
+                font-size: 1rem;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
+                color: var(--primary);
             }
             .preview-content {
                 flex: 1;
                 overflow: auto;
-                padding: 20px;
+                padding: 24px;
                 font-family: 'Fira Code', monospace;
-                font-size: 0.85rem;
-                line-height: 1.5;
+                font-size: 0.8rem;
+                line-height: 1.6;
                 white-space: pre;
-                background: #1e2832;
-                color: #d1d9e1;
+                background: #0f171e;
+                color: #a0aec0;
+                border-radius: 0 0 0 12px;
             }
             .close-btn {
-                background: none;
-                border: none;
+                background: rgba(255,255,255,0.05);
+                border: 1px solid rgba(255,255,255,0.1);
                 color: var(--text-dim);
-                font-size: 1.2rem;
+                font-size: 1rem;
                 cursor: pointer;
-                padding: 4px;
-                border-radius: 4px;
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
             }
             .close-btn:hover {
-                background: rgba(255,255,255,0.1);
-                color: var(--text);
+                background: var(--error);
+                border-color: var(--error);
+                color: white;
             }
         """)
     ]
@@ -201,7 +264,6 @@ class Viewer(Tag.div):
         }
         return path.suffix.lower() in text_extensions
 
-from htag.core import State
 
 class FileNavigator(Tag.App):
     statics = [
@@ -209,14 +271,15 @@ class FileNavigator(Tag.App):
             @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap');
             @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap');
             :root {
-                --bg: #1a242c;
-                --surface: #24313d;
-                --surface-light: #2d3d4d;
-                --primary: #81C1DF;
-                --accent: #F1CF6A;
-                --text: #CFDDE5;
-                --text-dim: #8ba2b1;
-                --hover: rgba(129, 193, 223, 0.1);
+                --bg: #0f172a;
+                --surface: #1e293b;
+                --surface-light: #334155;
+                --primary: #38bdf8;
+                --accent: #f59e0b;
+                --text: #f1f5f9;
+                --text-dim: #94a3b8;
+                --hover: rgba(56, 189, 248, 0.1);
+                --error: #ef4444;
             }
             body {
                 background: var(--bg);
@@ -237,64 +300,71 @@ class FileNavigator(Tag.App):
                 overflow: hidden;
             }
             .navbar {
-                padding: 16px 32px;
+                padding: 12px 24px;
                 background: var(--surface);
                 display: flex;
                 align-items: center;
-                gap: 20px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-                z-index: 10;
-                border-bottom: 1px solid rgba(129, 193, 223, 0.2);
+                gap: 24px;
+                z-index: 100;
+                border-bottom: 1px solid rgba(255,255,255,0.05);
             }
             .navbar h1 {
                 margin: 0;
                 font-weight: 600;
-                font-size: 1.2rem;
-                background: linear-gradient(135deg, var(--primary), var(--accent));
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
+                font-size: 1.1rem;
+                color: var(--primary);
                 letter-spacing: -0.5px;
-            }
-            .breadcrumb-bar {
-                padding: 8px 32px;
-                background: rgba(0,0,0,0.2);
-                font-size: 0.8rem;
-                color: var(--text-dim);
-                display: flex;
-                align-items: center;
-                gap: 8px;
                 white-space: nowrap;
-                overflow-x: auto;
-                scrollbar-width: none;
-                border-bottom: 1px solid rgba(255,255,255,0.05);
             }
             .split-view {
                 flex: 1;
                 display: flex;
                 overflow: hidden;
+                position: relative;
+            }
+            .explorer-container {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .breadcrumb {
+                padding: 10px 24px;
+                background: rgba(0,0,0,0.2);
+                font-size: 0.8rem;
+                color: var(--text-dim);
+                border-bottom: 1px solid rgba(255,255,255,0.05);
+                white-space: nowrap;
+                overflow-x: auto;
+                scrollbar-width: none;
             }
             .btn {
-                background: rgba(129, 193, 223, 0.1);
-                color: var(--primary);
-                border: 1px solid var(--primary);
-                padding: 8px 16px;
-                border-radius: 6px;
+                background: var(--surface-light);
+                color: var(--text);
+                border: 1px solid rgba(255,255,255,0.1);
+                padding: 6px 14px;
+                border-radius: 8px;
                 cursor: pointer;
-                font-weight: 600;
-                font-size: 0.8rem;
+                font-weight: 500;
+                font-size: 0.85rem;
                 transition: all 0.2s;
             }
             .btn:hover:not(:disabled) {
                 background: var(--primary);
                 color: var(--bg);
+                border-color: var(--primary);
             }
-            ::-webkit-scrollbar { width: 6px; height: 6px; }
+            .btn:disabled {
+                opacity: 0.3;
+                cursor: not-allowed;
+            }
+            ::-webkit-scrollbar { width: 8px; height: 8px; }
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb {
-                background: rgba(129, 193, 223, 0.2);
-                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 4px;
             }
-            ::-webkit-scrollbar-thumb:hover { background: rgba(129, 193, 223, 0.4); }
+            ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.2); }
         """)
     ]
 
@@ -305,43 +375,46 @@ class FileNavigator(Tag.App):
 
         # 2. Declarative Layout
         with Tag.div(_class="main-container"):
-            # Navigation Bar
+            # Header
             with Tag.div(_class="navbar"):
-                # "Up" button visibility is reactive
-                Tag.button("↑ Up", 
+                Tag.h1("htag2 Explorer")
+                Tag.button("↑ Back", 
                     _class="btn", 
                     _disabled=lambda: self.path.value.parent == self.path.value,
                     _onclick=self.go_up
                 )
-                Tag.h1("htag2 Explorer")
-
-            # Breadcrumbs (Reactive)
-            Tag.div(lambda: str(self.path.value), _class="breadcrumb-bar")
 
             # Split View
-            with Tag.div(_class="split-view"):
-                # Explorer (Left)
-                # Re-renders whenever path or selection changes
-                Tag.add(lambda: Explorer(self.path.value, self.selected.value, self.on_item_click))
+            with Tag.div(_class="split-view") as split_view:
+                # Sidebar (NEW)
+                Sidebar(self.go_to)
+
+                # Explorer Main Area
+                with Tag.div(_class="explorer-container") as explorer_container:
+                    Tag.div(lambda: str(self.path.value), _class="breadcrumb")
+                    
+                    # Explorer Grid
+                    explorer_container.add(lambda: Explorer(self.path.value, self.selected.value, self.on_item_click))
                 
-                # Viewer (Right)
-                # Conditionally shows based on selected file
-                Tag.add(lambda: Viewer(self.selected.value, self.on_close_viewer) if self.selected.value else None)
+                # Viewer (Right side)
+                split_view.add(lambda: Viewer(self.selected.value, self.on_close_viewer) if self.selected.value else "")
 
     def on_item_click(self, item):
         if item.is_dir():
-            self.path.value = item
-            self.selected.value = None
+            self.go_to(item)
         else:
             self.selected.value = item
 
+    def go_to(self, target_path):
+        self.path.value = Path(target_path).resolve()
+        self.selected.value = None
+
     def go_up(self, e):
         if self.path.value.parent != self.path.value:
-            self.path.value = self.path.value.parent
-            self.selected.value = None
+            self.go_to(self.path.value.parent)
 
     def on_close_viewer(self):
         self.selected.value = None
 
 if __name__ == "__main__":
-    ChromeApp(FileNavigator, width=1200, height=800).run()
+    ChromeApp(FileNavigator, width=1280, height=900).run()

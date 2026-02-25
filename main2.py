@@ -1,5 +1,4 @@
-from htag import Tag
-from htag.core import State
+from htag import Tag, State
 import logging
 
 class MessageBox(Tag.div):

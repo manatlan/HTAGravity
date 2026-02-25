@@ -63,7 +63,7 @@ class GTag: # aka "Generic Tag"
             
             if val is True:
                 attrs_list.append(attr_name)
-            elif val is False:
+            elif val is False or val is None:
                 continue
             else:
                 attrs_list.append(f'{attr_name}="{html.escape(str(val))}"')
@@ -335,6 +335,7 @@ class GTag: # aka "Generic Tag"
         if isinstance(child, (list, tuple)):
             return "".join(str(self._eval_child(i)) for i in child)
             
+        if child is None: return "" if stringify else None
         return str(child) if stringify else child
 
     def __str__(self) -> str:

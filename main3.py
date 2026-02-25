@@ -1,6 +1,6 @@
 import random
 import logging
-from htag import Tag, ChromeApp
+from htag import Tag, ChromeApp, State
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("sudoku")
@@ -46,7 +46,7 @@ class SudokuLogic:
             puzzle[r][c] = 0
         return grid, puzzle
 
-from htag.core import State
+
 
 class Sudoku(Tag.App):
     statics = [

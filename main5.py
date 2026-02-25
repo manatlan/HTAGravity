@@ -1,6 +1,6 @@
 import logging
 import asyncio
-from htag import Tag, ChromeApp
+from htag import Tag, ChromeApp, State
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("tailwind-demo")
@@ -471,11 +471,7 @@ class Dropdown(Tag.div):
             self.menu._class = "absolute left-0 z-10 mt-2 w-44 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 opacity-0 scale-95 pointer-events-none"
 
 
-# ====================================================================
-# APP : Main Application Flow
-# ====================================================================
 
-from htag.core import State
 
 # ====================================================================
 # APP : Main Application Flow

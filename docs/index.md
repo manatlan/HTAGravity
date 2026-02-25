@@ -21,8 +21,8 @@
 Creating a basic `htag` app is simple:
 
 ```python
-from htag import Tag, WebApp
-from htag.core import State
+from htag import Tag, WebApp, State
+
 
 class HelloApp(Tag.App):
     def init(self):

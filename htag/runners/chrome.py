@@ -4,6 +4,7 @@ import threading
 import logging
 import uvicorn
 import platform
+import inspect
 import os
 from typing import Union, Type, TYPE_CHECKING, Optional, Callable
 from .base import BaseRunner

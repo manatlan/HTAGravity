@@ -7,7 +7,7 @@ htag2 features a powerful, zero-boilerplate reactivity system inspired by modern
 The `State` class is the heart of the reactivity system. It tracks dependencies and notifies components when values change.
 
 ```python
-from htag.core import State
+from htag import Tag, State
 
 class MyApp(Tag.App):
     def init(self):

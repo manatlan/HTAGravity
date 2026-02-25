@@ -59,7 +59,7 @@ class Card(Tag.div):
 htag2 supports both traditional "dirty-marking" and modern reactive `State`.
 
 **Reactive State (Preferred for data-driven UIs)**:
-- Use `from htag.core import State`.
+- Use `from htag import State`.
 - Declare state variables: `self.count = State(0)`.
 - Read state dynamically using lambdas: `Tag.div(lambda: f"Count: {self.count.value}")`.
 - Modify state directly: `self.count.value += 1`.

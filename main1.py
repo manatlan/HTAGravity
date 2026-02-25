@@ -1,6 +1,5 @@
 import logging
-from htag import Tag, ChromeApp
-from htag.core import State
+from htag import Tag, ChromeApp, State
 
 logging.basicConfig(level=logging.INFO)
 
