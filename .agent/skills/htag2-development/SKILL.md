@@ -92,9 +92,7 @@ The `htag/server.py` implementation is fully robust against network irregulariti
 
 ### 7. Debug Mode & Error Visualization
 htag2 includes a built-in visual aid mechanism to help developers track bugs:
-- **`App(debug=True)` (Default)**: During development, ANY error that occurs (a Python exception in a callback, a JavaScript error, or a network disconnection) is visually reported via a Shadow DOM overlay at the bottom left of the screen.
-  - Python stack traces are sent to the browser securely without crashing the server.
-  - A small connection LED indicator (Green/Orange/Blue/Red) consistently monitors the WebSocket/SSE bridge status.
+- **`App(debug=True)` (Default)**: During development, ANY error that occurs (a Python exception in a callback, a JavaScript error, or a network disconnection) is visually reported via a Shadow DOM overlay in the screen (displaying js/traceback errors).
 - **`App(debug=False)`**: Use this for production (`ServerApp`, `FastAPI`). Tracebacks are logged internally and only generic "Internal Server Error" messages are shown in the client UI to prevent sensitive data leakage.
 
 ## Best Practices
