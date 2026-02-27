@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shoelace Toast Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/themes/light.css" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace@2.19.1/cdn/shoelace-autoloader.js"></script>
+</head>
+<body>
+  <button onclick="showToast()">Show Toast</button>
+
+  <script>
+    function showToast() {
+        const div = document.createElement('div');
+        div.innerHTML = '<sl-alert variant="success" duration="3000" closable><sl-icon slot="icon" name="check2-circle"></sl-icon><strong>Success!</strong><br>This is a toast.</sl-alert>';
+        const alert = div.firstElementChild;
+        document.body.append(alert);
+        customElements.whenDefined('sl-alert').then(() => {
+            alert.toast();
+        });
+    }
+  </script>
+</body>
+</html>

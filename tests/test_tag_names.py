@@ -1,0 +1,29 @@
+# -*- coding: utf-8 -*-
+from htag import Tag, GTag
+
+def test_tag_creator_hyphenation():
+    # Tag.sl_button should result in tag name "sl-button"
+    b = Tag.sl_button("hello")
+    assert b.tag == "sl-button"
+    assert str(b).startswith("<sl-button")
+
+def test_tag_creator_multiple_underscores():
+    # Tag.my_custom_web_component should result in "my-custom-web-component"
+    t = Tag.my_custom_web_component()
+    assert t.tag == "my-custom-web-component"
+    assert str(t).startswith("<my-custom-web-component")
+
+def test_gtag_direct_hyphenation():
+    # GTag("some_tag") should result in "some-tag"
+    t = GTag("some_tag")
+    assert t.tag == "some-tag"
+    assert str(t).startswith("<some-tag")
+
+def test_no_underscore_still_works():
+    # Tag.div should still be "div"
+    d = Tag.div()
+    assert d.tag == "div"
+    
+    # GTag("span") should still be "span"
+    s = GTag("span")
+    assert s.tag == "span"

@@ -110,7 +110,7 @@ class GTag: # aka "Generic Tag"
         # If tag is not set by subclass (class attribute), take it from first arg
         if getattr(self, "tag", None) is None:
             if args:
-                self.tag = args[0]
+                self.tag = args[0].replace("_", "-")
                 args = args[1:]
             else:
                 self.tag = "div" # fallback
@@ -375,7 +375,7 @@ class TagCreator:
             return self._registry[name]
         
         # Create a dynamic subclass of GTag
-        tag_name = name.lower()
+        tag_name = name.lower().replace("_", "-")
         # We cache it in registry for performance and consistency
         new_class = type(name, (GTag,), {"tag": tag_name})
         self._registry[name] = new_class

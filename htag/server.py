@@ -283,6 +283,9 @@ class WebServer:
                     # Store a backlink to the webserver for session-aware logic
                     setattr(self.instances[sid], "_webserver", self)
 
+                    # Trigger lifecycle mount on the root App instance
+                    self.instances[sid]._trigger_mount()
+
         return self.instances[sid]
 
     def _setup_routes(self) -> None:
