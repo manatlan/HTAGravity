@@ -19,6 +19,7 @@ Every UI element in htag2 is a component created via `Tag`.
 - Use `Tag.add(self, child)` or `Tag.add(lambda: ...)` for explicit addition. This is particularly useful when returning components from reactive lambdas, as it ensures they are properly parented even if they're not direct children.
 
 ```python
+# -*- coding: utf-8 -*-
 from htag import Tag
 
 class MyComponent(Tag.div):
@@ -103,6 +104,7 @@ htag2 includes a built-in visual aid mechanism to help developers track bugs:
 - Prefer `Tag.style` and `Tag.script`. Remember to use `_src` for script/image URLs.
 
 ```python
+# -*- coding: utf-8 -*-
 class App(Tag.App):
     statics = [
         Tag.script(_src="https://cdn.tailwindcss.com"),
@@ -140,7 +142,7 @@ When you are in developpment using "uv" (and htag2 is installed in the venv).
 Use `uv run htagm build <path>` to build a standalone executable for your htag app.
 
 ```bash
-uv run htagm build main.py
+PYTHONIOENCODING="utf-8" uv run htagm build main.py
 ```
 
 ## Multi-Session Deployment
