@@ -179,6 +179,27 @@ function fallback() {
     use_fallback = true;
     if(ws) ws.close(); // Ensure ws is torn down
     
+    // Auto-reload mechanism
+    if (window.HTAG_RELOAD) {
+        console.log("htag: connection lost, starting auto-reload polling...");
+        
+        function poll_reload() {
+            fetch("/").then(response => {
+                if (response.ok) {
+                    console.log("htag: server is back! Reloading page...");
+                    window.location.reload();
+                } else {
+                    setTimeout(poll_reload, 500);
+                }
+            }).catch(err => {
+                setTimeout(poll_reload, 500);
+            });
+        }
+        
+        setTimeout(poll_reload, 500);
+        return; // Don't try SSE, we just want to reload the page when the server comes back
+    }
+
     sse = new window.EventSource("/stream");
     sse.onopen = () => console.log("htag: SSE connected");
     sse.onmessage = function(event) {
@@ -402,6 +423,9 @@ class App(GTag):
                 <title>{self.__class__.__name__}</title>
                 <link rel="icon" href="/logo.png">
                 <script>{CLIENT_JS}</script>
+                <script>
+                    window.HTAG_RELOAD = {'true' if getattr(self, '_reload', False) else 'false'};
+                </script>
                 {statics_html}
             </head>
             {body_html}

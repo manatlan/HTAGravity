@@ -189,4 +189,4 @@ class MyApp(ui_App):
 
 if __name__ == "__main__":
     from htag import ChromeApp
-    ChromeApp(MyApp).run()
+    ChromeApp(MyApp).run(reload=True)

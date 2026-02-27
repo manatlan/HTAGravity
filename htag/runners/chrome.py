@@ -27,8 +27,18 @@ class ChromeApp(BaseRunner):
         self.height = height
         self._cleanup_func: Optional[Callable[[], None]] = None
 
-    def run(self, host: str = "127.0.0.1", port: int = 8000) -> None:
-        if self.kiosk:
+    def run(self, host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
+        if reload:
+            # Tag the app so the frontend knows to auto-reconnect
+            if inspect.isclass(self.app):
+                self.app._reload = True
+            else:
+                setattr(self.app, "_reload", True)
+
+        is_reloader_child = os.environ.get("HTAG_RELOADER", "") == "1"
+
+        if self.kiosk and not (reload and is_reloader_child):
+            # Only launch the browser if we are NOT the restarted child worker
             def launch() -> None:
                 time.sleep(1)  # Give the server a second to start
                 
@@ -95,6 +105,11 @@ class ChromeApp(BaseRunner):
                         logger.error("Fatal: Could not open any browser at all")
 
             threading.Thread(target=launch, daemon=True).start()
+
+        if reload and not is_reloader_child:
+            # We are the master process. Start the reloader loop.
+            self._run_with_reloader(host=host, port=port)
+            return
 
         from ..server import WebServer
         

@@ -29,8 +29,19 @@ class WebApp(BaseRunner):
             # For simplicity, we assume the user might want to customize it in their App class.
             pass
 
-    def run(self, host: str = "127.0.0.1", port: int = 8000, open_browser: bool = False) -> None:
-        if open_browser:
+    def run(self, host: str = "127.0.0.1", port: int = 8000, open_browser: bool = False, reload: bool = False) -> None:
+        if reload:
+            # Tag the app so the frontend knows to auto-reconnect
+            if inspect.isclass(self.app):
+                self.app._reload = True
+            else:
+                setattr(self.app, "_reload", True)
+
+        import os
+        is_reloader_child = os.environ.get("HTAG_RELOADER", "") == "1"
+
+        if open_browser and not (reload and is_reloader_child):
+            # Only launch the browser if we are NOT the restarted child worker
             def launch() -> None:
                 time.sleep(1)
                 url = f"http://{host}:{port}"
@@ -39,6 +50,11 @@ class WebApp(BaseRunner):
 
             threading.Thread(target=launch, daemon=True).start()
         
+        if reload and not is_reloader_child:
+            # We are the master process. Start the reloader loop.
+            self._run_with_reloader(host=host, port=port)
+            return
+
         from ..server import WebServer
         
         # Ensure instances created for this runner don't exit on disconnect

@@ -47,6 +47,22 @@ All runners accept the `App` class (or instance) and have a `run()` method with 
 
 - `host`: The IP address to bind to (default: "127.0.0.1").
 - `port`: The port to listen on (default: 8000).
+- `reload`: Enables the Hot-Reload auto-reconnector mechanism. (default: `False`).
+
+## Development & Hot-Reload (DX)
+
+For an improved Developer Experience (DX), you can pass `reload=True` to any runner during development:
+
+```python
+if __name__ == "__main__":
+    from htag import ChromeApp
+    ChromeApp(MyApp).run(reload=True) 
+```
+
+When `reload=True` is provided:
+1. **Zero-Config File Watcher**: `htag2` spawns a master process that watches all `.py` files in your current directory recursively.
+2. **Auto-Restart**: When you save a file, the Python ASGI backend is instantly terminated and restarted with your new code.
+3. **Seamless Browser Refresh**: The UI frontend stays open. It will realize the backend went offline, automatically poll for reconnection, and gracefully refresh the window once the new backend is up, saving you from constantly closing and re-opening your application.
 
 ---
 

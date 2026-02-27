@@ -133,9 +133,19 @@ def _onclick(self, event):
     # UI updates again at the end of the method
 ```
 
-## Runner Choice
+## Runner Choice & Developer Experience
 - **`ChromeApp`**: Primary choice. Attempts to launch a clean desktop-like Kiosk window via Chromium/Chrome binaries. If none are found, it falls back to opening the default system browser via `webbrowser.open`.
 - **`WebApp`**: For shared web access. Opens in the default browser in a new tab.
+
+**Hot-Reloading for Development**:
+To prevent constantly closing and re-opening your application window during development, pass `reload=True` to any runner:
+```python
+if __name__ == "__main__":
+    from htag import ChromeApp
+    # Master process watches files; child process runs server. 
+    # Browser auto-reconnects and refreshes seamlessly!
+    ChromeApp(MyApp).run(reload=True) 
+```
 
 ## Build standalone executable
 When you are in developpment using "uv" (and htag2 is installed in the venv).
