@@ -1,13 +1,15 @@
+from __future__ import annotations
+
+import inspect
+import logging
 import os
+import platform
+import subprocess
 import sys
 import time
-import subprocess
+from typing import TYPE_CHECKING, Any, Callable
 import threading
-import logging
 import uvicorn
-import platform
-import inspect
-from typing import Union, Type, TYPE_CHECKING, Optional, Callable, List, Any
 
 if TYPE_CHECKING:
     from .server import App
@@ -23,7 +25,7 @@ class ChromeApp:
 
     def __init__(
         self,
-        app: Union[Type["App"], "App"],
+        app: type[App] | App,
         kiosk: bool = True,
         width: int = 800,
         height: int = 600,
@@ -32,7 +34,7 @@ class ChromeApp:
         self.kiosk = kiosk
         self.width = width
         self.height = height
-        self._cleanup_func: Optional[Callable[[], None]] = None
+        self._cleanup_func: Callable[[], None] | None = None
 
     def run(
         self,
@@ -71,7 +73,7 @@ class ChromeApp:
                 atexit.register(cleanup)
                 self._cleanup_func = cleanup
 
-                browsers: List[str] = []
+                browsers: list[str] = []
                 if platform.system() == "Windows":
                     # Windows-specific browser paths
                     possible_paths = [
@@ -192,7 +194,7 @@ class ChromeApp:
 
         from .server import WebApp
 
-        def on_inst(inst: "App") -> None:
+        def on_inst(inst: App) -> None:
             inst.exit_on_disconnect = True
             if self._cleanup_func:
                 setattr(inst, "_browser_cleanup", self._cleanup_func)

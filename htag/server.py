@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import asyncio
 import json
+import logging
 import os
 import threading
 import uuid
 import inspect
-import logging
-from typing import Any, Dict, Optional, Union, List, Callable, Type, Set
+from typing import Any, Callable
 from starlette.applications import Starlette
 from starlette.websockets import WebSocket, WebSocketDisconnect
 from starlette.requests import Request
@@ -27,7 +29,7 @@ class Event:
     Attributes are dynamically populated from the client message.
     """
 
-    def __init__(self, target: GTag, msg: Dict[str, Any]) -> None:
+    def __init__(self, target: GTag, msg: dict[str, Any]) -> None:
         self.target = target
         self.id: str = msg.get("id", "")
         self.name: str = msg.get("event", "")
@@ -293,13 +295,13 @@ class WebApp:
 
     def __init__(
         self,
-        tag_entity: Union[Type["App"], "App"],
-        on_instance: Optional[Callable[["App"], None]] = None,
+        tag_entity: type[App] | App,
+        on_instance: Callable[[App], None] | None = None,
     ) -> None:
         self._lock = threading.Lock()
         self.tag_entity = tag_entity  # Class or Instance
         self.on_instance = on_instance  # Optional callback(instance)
-        self.instances: Dict[str, "App"] = {}  # sid -> App instance
+        self.instances: dict[str, App] = {}  # sid -> App instance
         self.app = Starlette()
         self._setup_routes()
 
@@ -328,7 +330,7 @@ class WebApp:
 
     def _setup_routes(self) -> None:
         async def index(request: Request) -> HTMLResponse:
-            htag_sid: Optional[str] = request.cookies.get("htag_sid")
+            htag_sid: str | None = request.cookies.get("htag_sid")
             if htag_sid is None:
                 htag_sid = str(uuid.uuid4())
 
@@ -346,7 +348,7 @@ class WebApp:
             return Response(status_code=204)
 
         async def websocket_endpoint(websocket: WebSocket) -> None:
-            htag_sid: Optional[str] = websocket.cookies.get("htag_sid")
+            htag_sid: str | None = websocket.cookies.get("htag_sid")
             if htag_sid:
                 instance = self._get_instance(htag_sid)
                 await instance._handle_websocket(websocket)
@@ -354,7 +356,7 @@ class WebApp:
                 await websocket.close()
 
         async def stream_endpoint(request: Request) -> Response:
-            htag_sid: Optional[str] = request.cookies.get("htag_sid")
+            htag_sid: str | None = request.cookies.get("htag_sid")
             if not htag_sid:
                 return Response(status_code=400, content="No session cookie")
 
@@ -364,7 +366,7 @@ class WebApp:
             )
 
         async def event_endpoint(request: Request) -> Response:
-            htag_sid: Optional[str] = request.cookies.get("htag_sid")
+            htag_sid: str | None = request.cookies.get("htag_sid")
             if not htag_sid:
                 return Response(status_code=400, content="No session cookie")
 
@@ -397,15 +399,15 @@ class App(GTag):
     Handles HTML rendering, event dispatching, and WebSocket communication.
     """
 
-    statics: List[GTag] = []
+    statics: list[GTag] = []
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__("body", *args, **kwargs)
         self.exit_on_disconnect: bool = False  # Default behavior for Web/API apps
         self.debug: bool = True  # Local debug mode default
-        self.websockets: Set[WebSocket] = set()
-        self.sse_queues: Set[asyncio.Queue] = set()  # Queues for active SSE connections
-        self.sent_statics: Set[str] = set()  # Track assets already in browser
+        self.websockets: set[WebSocket] = set()
+        self.sse_queues: set[asyncio.Queue] = set()  # Queues for active SSE connections
+        self.sent_statics: set[str] = set()  # Track assets already in browser
 
     @property
     def app(self) -> Starlette:
@@ -431,7 +433,7 @@ class App(GTag):
 
         # 2. Collect ALL statics from the whole tree
         self.sent_statics.clear()
-        all_statics: List[str] = []
+        all_statics: list[str] = []
         try:
             self.collect_statics(self, all_statics)
         except Exception:
@@ -464,7 +466,7 @@ class App(GTag):
         # Send initial state
         try:
             updates = {self.id: self.render_initial()}
-            js: List[str] = []
+            js: list[str] = []
             self.collect_updates(self, {}, js)
 
             payload = json.dumps({"action": "update", "updates": updates, "js": js})
@@ -497,7 +499,7 @@ class App(GTag):
         # Send initial state on connection/reconnection
         try:
             updates = {self.id: self.render_initial()}
-            js: List[str] = []
+            js: list[str] = []
             self.collect_updates(self, {}, js)  # We only want the JS calls here
 
             await websocket.send_text(
@@ -565,7 +567,7 @@ class App(GTag):
         return self.render_tag(self)
 
     def collect_updates(
-        self, tag: GTag, updates: Dict[str, str], js_calls: List[str]
+        self, tag: GTag, updates: dict[str, str], js_calls: list[str]
     ) -> None:
         """
         Recursively traverses the tag tree to find 'dirty' tags that need re-rendering.
@@ -592,7 +594,7 @@ class App(GTag):
                 js_calls.extend(tag._GTag__js_calls)
                 tag._GTag__js_calls = []
 
-    def collect_statics(self, tag: GTag, result: List[str]) -> None:
+    def collect_statics(self, tag: GTag, result: list[str]) -> None:
         # Collect statics from class and instance
         s_instance = getattr(tag, "statics", [])
         s_class = getattr(tag.__class__, "statics", [])
@@ -616,9 +618,9 @@ class App(GTag):
             for t in tag_list:
                 self.collect_statics(t, result)
 
-    async def handle_event(self, msg: Dict[str, Any], ws: Optional[WebSocket]) -> None:
-        tag_id: Optional[str] = msg.get("id")
-        event_name: Optional[str] = msg.get("event")
+    async def handle_event(self, msg: dict[str, Any], ws: WebSocket | None) -> None:
+        tag_id: str | None = msg.get("id")
+        event_name: str | None = msg.get("event")
 
         if not isinstance(tag_id, str):
             return
@@ -701,15 +703,15 @@ class App(GTag):
                 await self.broadcast_updates(result=res, callback_id=callback_id)
 
     async def broadcast_updates(
-        self, result: Any = None, callback_id: Optional[str] = None
+        self, result: Any = None, callback_id: str | None = None
     ) -> None:
         """
         Collects all pending updates (tags, JS calls, statics)
         and broadcasts them to all connected clients.
         Optional 'result' and 'callback_id' are used to resolve client-side Promises.
         """
-        updates: Dict[str, str] = {}
-        js_calls: List[str] = []
+        updates: dict[str, str] = {}
+        js_calls: list[str] = []
 
         try:
             self.collect_updates(self, updates, js_calls)
@@ -732,7 +734,7 @@ class App(GTag):
             )
 
             # Send to websocket clients
-            dead_ws: List[WebSocket] = []
+            dead_ws: list[WebSocket] = []
             for client in list(self.websockets):
                 try:
                     await client.send_text(err_payload)
@@ -747,7 +749,7 @@ class App(GTag):
 
             return  # Abort sending normal updates
 
-        all_statics: List[str] = []
+        all_statics: list[str] = []
         self.collect_statics(self, all_statics)
         new_statics = [s for s in all_statics if s not in self.sent_statics]
 
@@ -774,7 +776,7 @@ class App(GTag):
             payload = json.dumps(data)
 
             # Send to websocket clients
-            dead_ws_clients: List[WebSocket] = []
+            dead_ws_clients: list[WebSocket] = []
             for client in list(self.websockets):
                 try:
                     await client.send_text(payload)
@@ -815,7 +817,7 @@ class App(GTag):
         process(tag)
         return str(tag)
 
-    def find_tag(self, root: GTag, tag_id: str) -> Optional[GTag]:
+    def find_tag(self, root: GTag, tag_id: str) -> GTag | None:
         """Recursively find a tag by its ID, searching both static and dynamic (reactive) children."""
         if root.id == tag_id:
             return root
