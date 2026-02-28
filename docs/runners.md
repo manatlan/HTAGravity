@@ -16,11 +16,13 @@ class MyApp(Tag.App):
         self <= Tag.h1("I am a web app")
 
 # 1. Create your main Starlette/FastAPI app
-app = Starlette(debug=True)
+app = Starlette(debug=False)  # Starlette's own debug mode
 
-# 2. Instantiate and mount your htag2 app
-myapp = MyApp()
-app.mount("/", myapp.app)
+# 2. Wrap your htag app in a WebApp runner
+from htag.server import WebApp
+htag_app = WebApp(MyApp, debug=True) # htag2 debug mode
+
+app.mount("/", htag_app.app)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
@@ -42,7 +44,8 @@ class MyApp(Tag.App):
     pass
 
 if __name__ == "__main__":
-    ChromeApp(MyApp, width=600, height=800).run()
+    # debug=True (default) enables browser-side error reporting
+    ChromeApp(MyApp, width=600, height=800, debug=True).run()
 ```
 
 - **Features**:

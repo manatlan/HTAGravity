@@ -44,6 +44,7 @@ htag2 is a Python library for building web applications using HTML, CSS, and Jav
 *   **Zero-Config Hot-Reload**: Passing `reload=True` to any runner (e.g. `ChromeApp(App).run(reload=True)`) automatically watches for Python file changes, seamlessly restarts the backend, and gracefully refreshes the frontend without losing your browser window session.
 *   **F5/Reload Robustness**: Refreshing the browser no longer kills the Python backend; the session reconstructs cleanly.
 *   **HTTP Fallback (SSE + POST)**: If WebSockets are blocked (e.g. strict proxies) or fail to connect, the client seamlessly falls back to HTTP POST for events and Server-Sent Events (SSE) for receiving UI updates.
+*   **Production Debug Mode**: Easily disable error reporting in the client by setting `debug=False` on the runner (e.g. `WebApp(App, debug=False)`), preventing internal stacktraces from leaking to users.
 
 ### New API Features
 *   **`.root`, `.parent`, and `.childs` properties**: Every `GTag` exposes its position in the component tree. `.root` references the main `Tag.App` instance, `.parent` references the direct parent component, and `.childs` is a list of its children. This allows components to easily navigate the DOM tree and trigger app-level actions.

@@ -297,10 +297,12 @@ class WebApp:
         self,
         tag_entity: type[App] | App,
         on_instance: Callable[[App], None] | None = None,
+        debug: bool = True,
     ) -> None:
         self._lock = threading.Lock()
         self.tag_entity = tag_entity  # Class or Instance
         self.on_instance = on_instance  # Optional callback(instance)
+        self.debug = debug
         self.instances: dict[str, App] = {}  # sid -> App instance
         self.app = Starlette()
         self._setup_routes()
@@ -319,6 +321,9 @@ class WebApp:
 
                     if self.on_instance:
                         self.on_instance(self.instances[sid])
+
+                    # Propagate debug mode
+                    self.instances[sid].debug = self.debug
 
                     # Store a backlink to the webserver for session-aware logic
                     setattr(self.instances[sid], "_webserver", self)

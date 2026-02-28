@@ -16,8 +16,9 @@ class MyApp(Tag.App):
     def init(self):
         self <= Tag.h1("Production App")
 
-# Create the Starlette instance
-app = MyApp().app
+# Create the WebApp runner (production: debug=False)
+from htag.server import WebApp
+app = WebApp(MyApp, debug=False).app
 ```
 
 You can now run this with `uvicorn`:

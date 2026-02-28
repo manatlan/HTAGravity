@@ -29,11 +29,13 @@ class ChromeApp:
         kiosk: bool = True,
         width: int = 800,
         height: int = 600,
+        debug: bool = True,
     ):
         self.app = app
         self.kiosk = kiosk
         self.width = width
         self.height = height
+        self.debug = debug
         self._cleanup_func: Callable[[], None] | None = None
 
     def run(
@@ -202,7 +204,7 @@ class ChromeApp:
         if not inspect.isclass(self.app):
             self.app.exit_on_disconnect = True
 
-        ws = WebApp(self.app, on_instance=on_inst)
+        ws = WebApp(self.app, on_instance=on_inst, debug=self.debug)
         log_config = (
             None if getattr(sys, "frozen", False) else uvicorn.config.LOGGING_CONFIG
         )

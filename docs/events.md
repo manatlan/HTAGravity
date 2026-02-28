@@ -7,7 +7,7 @@
 You can attach event handlers to any `Tag` component using the `_on{event}` syntax:
 
 ```python
-def my_callback(e):
+def my_callback(e: Any) -> None:
     print(f"Clicked on {e.target.id}")
     e.target.add(Tag.span("!"))
 
@@ -30,7 +30,7 @@ When you use an `<input>`, `<textarea>`, or `<select>`, `htag` injects an `_onin
 
 ```python
 class MyForm(Tag.App):
-    def init(self):
+    def init(self) -> None:
         # No '_oninput' needed, it's automatic!
         self.entry = Tag.input(_value="Initial")
         self <= self.entry
@@ -42,7 +42,7 @@ class MyForm(Tag.App):
 `htag` fully supports `asyncio`. You can define callbacks as `async def`:
 
 ```python
-async def my_async_callback(e):
+async def my_async_callback(e: Any) -> None:
     await asyncio.sleep(1)
     e.target.add("Done!")
 ```
@@ -52,7 +52,7 @@ async def my_async_callback(e):
 For long-running tasks that need to update the UI multiple times, you can use generators:
 
 ```python
-def my_generator(e):
+def my_generator(e: Any) -> Generator:
     e.target.add("Starting...")
     yield # Triggers a UI update to the client
     
@@ -69,7 +69,7 @@ def my_generator(e):
 htag2 also supports `async for` generators for asynchronous UI streaming.
 
 ```python
-async def my_async_gen(e):
+async def my_async_gen(e: Any) -> AsyncGenerator:
     e.target.add("Fetching...")
     yield
     await asyncio.sleep(2)

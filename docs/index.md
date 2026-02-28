@@ -25,7 +25,7 @@ from htag import Tag, WebApp, State
 
 
 class HelloApp(Tag.App):
-    def init(self):
+    def init(self) -> None:
         self.count = State(0)
         
         with Tag.div(_class="container"):
@@ -33,7 +33,7 @@ class HelloApp(Tag.App):
             Tag.p(lambda: f"Clicked {self.count.value} times")
             Tag.button("Click Me", _onclick=self.increment)
 
-    def increment(self, e):
+    def increment(self, e: Any) -> None:
         self.count.value += 1
 
 if __name__ == "__main__":

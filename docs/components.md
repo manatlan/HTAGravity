@@ -14,7 +14,7 @@ You can create a custom component by subclassing `Tag.div`, for example:
 from htag import Tag
 
 class MyComponent(Tag.div):
-    def init(self, name):
+    def init(self, name: str) -> None:
         self._class = "my-class"
         self.add(f"Hello {name}!")
 ```
@@ -29,15 +29,15 @@ Lifecycle hooks let you run code at specific times in a component's life:
 
 ```python
 class Clock(Tag.div):
-    def init(self):
+    def init(self) -> None:
         self._class = "clock"
-        self.taskId = None
+        self.taskId: int | None = None
         
-    def on_mount(self):
+    def on_mount(self) -> None:
         # We are on the screen! Start ticking...
         print("Clock mounted")
         
-    def on_unmount(self):
+    def on_unmount(self) -> None:
         # We are removed from the screen! Cleanup...
         print("Clock unmounted")
 ```

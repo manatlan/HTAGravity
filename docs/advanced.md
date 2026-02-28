@@ -13,7 +13,8 @@ To enable multi-session isolation, you must pass the **App class** (not an insta
 from htag import WebApp, Tag
 
 class MyMultiUserApp(Tag.App):
-    pass
+    def init(self) -> None:
+        pass
 
 if __name__ == "__main__":
     # Passing the CLASS enables session isolation

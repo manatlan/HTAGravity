@@ -218,9 +218,9 @@ class Table(Tag.div):
             for j, cell in enumerate(row):
                 if j == 0:
                      # First column usually highlighted
-                     tr <= Tag.th(str(cell), _class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap", scope="row")
+                     tr <= Tag.th(cell, _class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap", scope="row")
                 else:
-                     tr <= Tag.td(str(cell), _class="px-6 py-4")
+                     tr <= Tag.td(cell, _class="px-6 py-4")
             tbody <= tr
         table <= tbody
 
@@ -557,9 +557,9 @@ class DemoApp(Tag.App):
                     Table(
                         headers = ["Nom", "Rôle", "Statut", "Action"],
                         rows = [
-                            ["Alice Dupont", "Admin", Badge("Actif", "green"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
-                            ["Bob Martin", "User", Badge("Inactif", "gray"), Button("Editer", "secondary", _class="text-xs py-1 px-2")],
-                            ["Charlie", "Editor", Badge("Review", "yellow"), Button("Editer", "secondary", _class="text-xs py-1 px-2")]
+                            ["Alice Dupont", "Admin", Badge("Actif", "green"), Button("Editer", "secondary", _class="text-xs py-1 px-2", _onclick=lambda e: self.fire_toast("Edition de Alice Dupont...", "info"))],
+                            ["Bob Martin", "User", Badge("Inactif", "gray"), Button("Editer", "secondary", _class="text-xs py-1 px-2", _onclick=lambda e: self.fire_toast("Edition de Bob Martin...", "info"))],
+                            ["Charlie", "Editor", Badge("Review", "yellow"), Button("Editer", "secondary", _class="text-xs py-1 px-2", _onclick=lambda e: self.fire_toast("Edition de Charlie...", "info"))]
                         ]
                     )
 

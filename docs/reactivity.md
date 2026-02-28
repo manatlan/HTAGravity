@@ -10,7 +10,7 @@ The `State` class is the heart of the reactivity system. It tracks dependencies 
 from htag import Tag, State
 
 class MyApp(Tag.App):
-    def init(self):
+    def init(self) -> None:
         self.count = State(0)
 ```
 
