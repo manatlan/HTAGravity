@@ -38,13 +38,19 @@ class State:
     def value(self, new_value: Any) -> None:
         if self._value != new_value:
             self._value = new_value
-            # Notify observers
-            for observer in self._observers:
-                observer._GTag__dirty = True
+            self._notify_observers()
 
     def set(self, value: Any) -> Any:
         self.value = value
         return value
+
+    def notify(self) -> None:
+        """Force notification after in-place mutation of mutable values (lists, dicts)."""
+        self._notify_observers()
+
+    def _notify_observers(self) -> None:
+        for observer in self._observers:
+            observer._GTag__dirty = True
 
 
 VOID_ELEMENTS: set[str] = {
@@ -182,12 +188,18 @@ class GTag:  # aka "Generic Tag"
         for child in self.childs:
             if isinstance(child, GTag):
                 child._trigger_mount()
+        for tag_list in self.__rendered_callables.values():
+            for t in tag_list:
+                t._trigger_mount()
 
     def _trigger_unmount(self) -> None:
         self.on_unmount()
         for child in self.childs:
             if isinstance(child, GTag):
                 child._trigger_unmount()
+        for tag_list in self.__rendered_callables.values():
+            for t in tag_list:
+                t._trigger_unmount()
 
     def add(self, *content: Any) -> "GTag":
         for item in content:
@@ -229,18 +241,7 @@ class GTag:  # aka "Generic Tag"
         - Attributes starting with 'on' are treated as event callbacks.
         - Setting an HTML attribute or event marks the tag as 'dirty' for client-side update.
         """
-        if name in [
-            "_GTag__lock",
-            "childs",
-            "_GTag__attrs",
-            "_GTag__events",
-            "_GTag__dirty",
-            "_GTag__js_calls",
-            "_GTag__rendered_callables",
-            "parent",
-            "tag",
-            "id",
-        ]:
+        if name.startswith("_GTag__") or name in ("childs", "parent", "tag", "id"):
             super().__setattr__(name, value)
         elif name.startswith("_on") and (callable(value) or isinstance(value, str)):
             # Event (e.g., self._onclick = my_callback or self._onclick = "alert(1)")
@@ -317,7 +318,7 @@ class GTag:  # aka "Generic Tag"
                         child._trigger_unmount()
                     child.parent = None
             self.childs = []
-            self._GTag__rendered_callables: dict[Callable, list[GTag]] = {}
+            self.__rendered_callables.clear()
             self.__dirty = True
         return self
 
@@ -342,6 +343,40 @@ class GTag:  # aka "Generic Tag"
     def call_js(self, script: str) -> "GTag":
         self.__js_calls.append(script)
         return self
+
+    # --- Public API for server-side access (avoids name-mangled access) ---
+
+    @property
+    def is_dirty(self) -> bool:
+        """Whether this tag has pending changes that need re-rendering."""
+        return self.__dirty
+
+    def _reset_dirty(self) -> None:
+        """Clear the dirty flag after rendering."""
+        self.__dirty = False
+
+    def _get_rendered_callables(self) -> dict[Callable, list["GTag"]]:
+        """Return the dict of callable -> rendered GTag children."""
+        return self.__rendered_callables
+
+    def _consume_js_calls(self) -> list[str]:
+        """Return and clear pending JS calls."""
+        calls = list(self.__js_calls)
+        self.__js_calls.clear()
+        return calls
+
+    def _get_events(self) -> dict[str, Callable | str]:
+        """Return the events dict."""
+        return self.__events
+
+    def _get_attrs(self) -> dict[str, Any]:
+        """Return the attributes dict."""
+        return self.__attrs
+
+    def _set_attr_direct(self, name: str, value: Any) -> None:
+        """Set an attribute directly without triggering dirty flag (for input sync)."""
+        with self.__lock:
+            self.__attrs[name] = value
 
     def _eval_child(self, child: Any, stringify: bool = True) -> Any:
         """Evaluates a child for rendering. If it's a callable, evaluate it recursively and track observers."""
@@ -406,7 +441,7 @@ def stop(func: Callable) -> Callable:
 
 
 class TagCreator:
-    def __init__(self):
+    def __init__(self) -> None:
         self._registry: dict[str, type[GTag]] = {}
 
     def __getattr__(self, name: str) -> type[GTag]:

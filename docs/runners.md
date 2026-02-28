@@ -19,10 +19,12 @@ class MyApp(Tag.App):
 app = Starlette(debug=False)  # Starlette's own debug mode
 
 # 2. Wrap your htag app in a WebApp runner
-from htag.server import WebApp
-htag_app = WebApp(MyApp, debug=True) # htag2 debug mode
+from htag import WebApp
+# Wrap your htag App in a WebApp
+htag_app = WebApp(MyApp)
 
-app.mount("/", htag_app.app)
+# Mount or include routes
+app.mount("/htag", htag_app.app)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

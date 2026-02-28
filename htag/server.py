@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import threading
+import traceback
 import uuid
 import inspect
 from typing import Any, Callable
@@ -289,7 +290,7 @@ function htag_event(id, event_name, event) {
 
 class WebApp:
     """
-    FastAPI implementation for hosting one or more App sessions.
+    Starlette implementation for hosting one or more App sessions.
     Handles the HTTP initial render and the WebSocket communication.
     """
 
@@ -426,8 +427,6 @@ class App(GTag):
         try:
             body_html = self.render_initial()
         except Exception as e:
-            import traceback
-
             error_trace = traceback.format_exc()
             logger.error("Error during initial render: %s\n%s", e, error_trace)
             if self.debug:
@@ -571,6 +570,16 @@ class App(GTag):
         # Initial render of the page (body)
         return self.render_tag(self)
 
+    def _walk_tree(self, tag: GTag, visitor: Callable[[GTag], None]) -> None:
+        """Generic tree walker: visits static children and rendered callables."""
+        visitor(tag)
+        for child in tag.childs:
+            if isinstance(child, GTag):
+                self._walk_tree(child, visitor)
+        for tag_list in tag._get_rendered_callables().values():
+            for t in tag_list:
+                self._walk_tree(t, visitor)
+
     def collect_updates(
         self, tag: GTag, updates: dict[str, str], js_calls: list[str]
     ) -> None:
@@ -578,50 +587,30 @@ class App(GTag):
         Recursively traverses the tag tree to find 'dirty' tags that need re-rendering.
         Also collects pending JavaScript calls from tags.
         """
-        with tag._GTag__lock:
-            if getattr(tag, "_GTag__dirty", False):
-                # This tag or one of its attributes changed, we re-render it entirely
-                updates[tag.id] = self.render_tag(tag)
+        def visitor(t: GTag) -> None:
+            with t._GTag__lock:
+                if t.is_dirty:
+                    updates[t.id] = self.render_tag(t)
+                pending_js = t._consume_js_calls()
+                if pending_js:
+                    js_calls.extend(pending_js)
 
-            # 1. Check static children
-            for child in tag.childs:
-                if isinstance(child, GTag):
-                    self.collect_updates(child, updates, js_calls)
-
-            # 2. Check dynamic (rendered) children
-            rendered = getattr(tag, "_GTag__rendered_callables", {})
-            for tag_list in rendered.values():
-                for t in tag_list:
-                    self.collect_updates(t, updates, js_calls)
-
-            # Extract and clear JS calls
-            if getattr(tag, "_GTag__js_calls", []):
-                js_calls.extend(tag._GTag__js_calls)
-                tag._GTag__js_calls = []
+        self._walk_tree(tag, visitor)
 
     def collect_statics(self, tag: GTag, result: list[str]) -> None:
-        # Collect statics from class and instance
-        s_instance = getattr(tag, "statics", [])
-        s_class = getattr(tag.__class__, "statics", [])
+        """Recursively collects statics from the whole tag tree."""
+        def visitor(t: GTag) -> None:
+            s_instance = getattr(t, "statics", [])
+            s_class = getattr(t.__class__, "statics", [])
+            for s_list in [s_class, s_instance]:
+                if not isinstance(s_list, (list, tuple)):
+                    s_list = [s_list]
+                for s in s_list:
+                    s_str = str(s)
+                    if s_str not in result:
+                        result.append(s_str)
 
-        for s_list in [s_class, s_instance]:
-            if not isinstance(s_list, (list, tuple)):
-                s_list = [s_list]
-            for s in s_list:
-                s_str = str(s)
-                if s_str not in result:
-                    result.append(s_str)
-
-        # 1. Traverse static children
-        for child in tag.childs:
-            if isinstance(child, GTag):
-                self.collect_statics(child, result)
-
-        # 2. Traverse dynamic (rendered) children
-        rendered = getattr(tag, "_GTag__rendered_callables", {})
-        for tag_list in rendered.values():
-            for t in tag_list:
-                self.collect_statics(t, result)
+        self._walk_tree(tag, visitor)
 
     async def handle_event(self, msg: dict[str, Any], ws: WebSocket | None) -> None:
         tag_id: str | None = msg.get("id")
@@ -635,17 +624,20 @@ class App(GTag):
             callback_id = msg.get("data", {}).get("callback_id")
             # Auto-sync value from client (bypass __setattr__ to avoid re-rendering the input while typing)
             if "value" in msg.get("data", {}):
-                with target_tag._GTag__lock:
-                    target_tag._GTag__attrs["value"] = msg["data"]["value"]
+                target_tag._set_attr_direct("value", msg["data"]["value"])
 
-            if event_name in target_tag._GTag__events:
+            if event_name in target_tag._get_events():
                 logger.info(
                     "Event '%s' on tag %s (id: %s)",
                     event_name,
                     target_tag.tag,
                     target_tag.id,
                 )
-                callback = target_tag._GTag__events[event_name]
+                callback = target_tag._get_events()[event_name]
+                if isinstance(callback, str):
+                    # Raw JS string event — no server-side dispatch needed
+                    await self.broadcast_updates(result=None, callback_id=callback_id)
+                    return
                 event = Event(target_tag, msg)
                 try:
                     if asyncio.iscoroutinefunction(callback):
@@ -673,8 +665,6 @@ class App(GTag):
                     # Final broadcast after callback finishes, including the result if any
                     await self.broadcast_updates(result=res, callback_id=callback_id)
                 except Exception as e:
-                    import traceback
-
                     error_trace: str = traceback.format_exc()
                     error_msg: str = (
                         f"Error in {event_name} callback: {str(e)}\n{error_trace}"
@@ -721,8 +711,6 @@ class App(GTag):
         try:
             self.collect_updates(self, updates, js_calls)
         except Exception as e:
-            import traceback
-
             error_trace = traceback.format_exc()
             error_msg = (
                 f"Error during render/update collection: {str(e)}\n{error_trace}"
@@ -807,14 +795,12 @@ class App(GTag):
                     # Auto-inject oninput for inputs if not already there, to support auto-binding
                     if (
                         t.tag in ["input", "textarea", "select"]
-                        and "input" not in t._GTag__events
+                        and "input" not in t._get_events()
                     ):
-                        t._GTag__attrs["oninput"] = (
+                        t._get_attrs()["oninput"] = (
                             f"htag_event('{t.id}', 'input', event)"
                         )
-                    # Only clear dirty flag for objects that have it
-                    if hasattr(t, "_GTag__dirty"):
-                        t._GTag__dirty = False  # Clear dirty flag after rendering
+                    t._reset_dirty()  # Clear dirty flag after rendering
                     for child in t.childs:
                         if isinstance(child, GTag):
                             process(child)
@@ -824,25 +810,14 @@ class App(GTag):
 
     def find_tag(self, root: GTag, tag_id: str) -> GTag | None:
         """Recursively find a tag by its ID, searching both static and dynamic (reactive) children."""
-        if root.id == tag_id:
-            return root
+        result: list[GTag | None] = [None]
 
-        # 1. Search in static children
-        for child in root.childs:
-            if isinstance(child, GTag):
-                found = self.find_tag(child, tag_id)
-                if found:
-                    return found
+        def visitor(t: GTag) -> None:
+            if result[0] is None and t.id == tag_id:
+                result[0] = t
 
-        # 2. Search in dynamic (rendered from callables) children
-        rendered = getattr(root, "_GTag__rendered_callables", {})
-        for tag_list in rendered.values():
-            for t in tag_list:
-                found = self.find_tag(t, tag_id)
-                if found:
-                    return found
-
-        return None
+        self._walk_tree(root, visitor)
+        return result[0]
 
 
 from .core import Tag  # noqa: E402

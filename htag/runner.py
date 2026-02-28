@@ -4,6 +4,7 @@ import inspect
 import logging
 import os
 import platform
+import signal
 import subprocess
 import sys
 import time
@@ -262,8 +263,6 @@ class ChromeApp:
                 if process.poll() is None:
                     process.terminate()
                 break
-
-            import signal
 
             if process.returncode is not None and process.returncode not in (
                 0,

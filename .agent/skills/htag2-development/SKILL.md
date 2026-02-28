@@ -65,6 +65,7 @@ htag2 supports both traditional "dirty-marking" and modern reactive `State`.
 - Read state dynamically using lambdas: `Tag.div(lambda: f"Count: {self.count.value}")`.
 - Modify state directly: `self.count.value += 1`.
 - Functional updates: Use `state.set(new_value)` if you need to update state and return the value in a single expression (e.g., inside a lambda): `_onclick=lambda e: self.count.set(self.count.value + 1)`.
+- Mutable values: When mutating a value in-place (e.g., appending to a list), call `state.notify()` to force a re-render: `self.items.value.append("new"); self.items.notify()`.
 
 **Reactive & Boolean Attributes**:
 - Attributes support lambdas for dynamic updates: `Tag.div(_class=lambda: "active" if self.is_active.value else "hidden")`.
