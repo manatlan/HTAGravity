@@ -2,28 +2,38 @@
 
 Runners are responsible for hosting your `App` and launching the interface.
 
-## WebApp
+## Web Deployment (Starlette Integration)
 
-`WebApp` is the standard runner for web-based applications. By default, it starts the server without automatically opening a browser tab.
+For web-based deployment, we recommend integrating your `htag2` application directly into a **Starlette** (or FastAPI) server. This provides the most flexibility and follows standard Python web practices.
 
 ```python
-from htag import WebApp, Tag
+from htag import Tag
+from starlette.applications import Starlette
+import uvicorn
 
-class HelloApp(Tag.App):
-    pass
+class MyApp(Tag.App):
+    def init(self):
+        self <= Tag.h1("I am a web app")
+
+# 1. Create your main Starlette/FastAPI app
+app = Starlette(debug=True)
+
+# 2. Instantiate and mount your htag2 app
+myapp = MyApp()
+app.mount("/", myapp.app)
 
 if __name__ == "__main__":
-    WebApp(HelloApp).run(host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
-- **Default behavior**: 
-    - Does not exit the server when the browser tab is closed.
-    - Does **not** open a browser tab automatically (can be enabled with `run(open_browser=True)`).
-- **Usage**: Best for tools that should run continuously or be accessible by multiple users.
+- **Advantages**: 
+    - Full control over routes, middleware, and documentation.
+    - Seamlessly mix standard HTML/API routes with reactive `htag2` components.
+    - Support for subpath mounting (e.g., `app.mount("/app", ...)`).
 
-## ChromeApp
+## Desktop Deployment (ChromeApp)
 
-`ChromeApp` launches your application as a standalone kiosk window using Google Chrome or Chromium.
+`ChromeApp` is the primary runner for local desktop usage. It attempts to launch a clean desktop-like Kiosk window via Chromium/Chrome binaries.
 
 ```python
 from htag import ChromeApp, Tag
@@ -36,22 +46,13 @@ if __name__ == "__main__":
 ```
 
 - **Features**:
-
     - Clean UI without URL bars or browser tabs.
     - Automatic cleanup of temporary browser profiles.
-    - **Smart Exit**: Automatically shuts down the Python server when the window is closed (highly recommended for desktop-like tools).
-
-## Base Runner API
-
-All runners accept the `App` class (or instance) and have a `run()` method with common parameters:
-
-- `host`: The IP address to bind to (default: "127.0.0.1").
-- `port`: The port to listen on (default: 8000).
-- `reload`: Enables the Hot-Reload auto-reconnector mechanism. (default: `False`).
+    - **Smart Exit**: Automatically shuts down the Python server when the window is closed.
 
 ## Development & Hot-Reload (DX)
 
-For an improved Developer Experience (DX), you can pass `reload=True` to any runner during development:
+For an improved Developer Experience (DX), you can pass `reload=True` to the runner during development:
 
 ```python
 if __name__ == "__main__":
@@ -62,7 +63,7 @@ if __name__ == "__main__":
 When `reload=True` is provided:
 1. **Zero-Config File Watcher**: `htag2` spawns a master process that watches all `.py` files in your current directory recursively.
 2. **Auto-Restart**: When you save a file, the Python ASGI backend is instantly terminated and restarted with your new code.
-3. **Seamless Browser Refresh**: The UI frontend stays open. It will realize the backend went offline, automatically poll for reconnection, and gracefully refresh the window once the new backend is up, saving you from constantly closing and re-opening your application.
+3. **Seamless Browser Refresh**: The UI frontend stays open. It will realize the backend went offline, automatically poll for reconnection, and gracefully refresh the window once the new backend is up.
 
 ---
 

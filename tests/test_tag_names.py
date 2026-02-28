@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from htag import Tag, GTag
+from htag import Tag
+from htag.core import GTag
 
 def test_tag_creator_hyphenation():
     # Tag.sl_button should result in tag name "sl-button"

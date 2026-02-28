@@ -109,10 +109,9 @@ class MyApp(Tag.App):
             self <= MessageBox("Validation Error", "Please provide both a name and an age to continue.")
 
 if __name__ == "__main__":
-    from htag import WebApp,ChromeApp
+    from htag import ChromeApp
     import logging
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger("app")
     
-    # WebApp(App).run()
     ChromeApp(MyApp, width=1024, height=768).run()

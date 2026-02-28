@@ -14,7 +14,7 @@ Here is a full rewrite of [htag](https://github.com/manatlan/htag), using only a
 
 It feels very good. It's not a replacement, it's just a POC.
 
-It's completly crazy, but it works (ChromeApp & WebApp, on linux/windows).
+It's completely crazy, but it works (ChromeApp on linux/windows).
 
 
 ## Get Started

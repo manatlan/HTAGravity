@@ -1,7 +1,7 @@
 import os
 from unittest.mock import patch, MagicMock
 import pytest
-from htag import Tag, ChromeApp, WebApp
+from htag import Tag, ChromeApp
 
 class MyTestApp(Tag.App):
     pass
@@ -16,10 +16,10 @@ def cleanup_env():
         del os.environ["HTAG_RELOADER"]
 
 
-@patch("htag.runners.chrome.threading.Thread")
-@patch("htag.runners.chrome.subprocess.Popen")
-@patch("htag.runners.chrome.uvicorn.run")
-@patch("htag.runners.chrome.ChromeApp._run_with_reloader")
+@patch("htag.runner.threading.Thread")
+@patch("htag.runner.subprocess.Popen")
+@patch("htag.runner.uvicorn.run")
+@patch("htag.runner.ChromeApp._run_with_reloader")
 def test_chromeapp_reload_master(mock_run_reloader, mock_uvicorn, mock_popen, mock_thread):
     """
     Test ChromeApp with reload=True when it's the MASTER process.
@@ -40,10 +40,10 @@ def test_chromeapp_reload_master(mock_run_reloader, mock_uvicorn, mock_popen, mo
     mock_thread.assert_called_once()
 
 
-@patch("htag.runners.chrome.threading.Thread")
-@patch("htag.runners.chrome.subprocess.Popen")
-@patch("htag.runners.chrome.uvicorn.run")
-@patch("htag.runners.chrome.ChromeApp._run_with_reloader")
+@patch("htag.runner.threading.Thread")
+@patch("htag.runner.subprocess.Popen")
+@patch("htag.runner.uvicorn.run")
+@patch("htag.runner.ChromeApp._run_with_reloader")
 def test_chromeapp_reload_child(mock_run_reloader, mock_uvicorn, mock_popen, mock_thread):
     """
     Test ChromeApp with reload=True when it's the CHILD WORKER process.
@@ -64,52 +64,14 @@ def test_chromeapp_reload_child(mock_run_reloader, mock_uvicorn, mock_popen, moc
     mock_thread.assert_not_called()
 
 
-@patch("htag.runners.web.threading.Thread")
-@patch("htag.runners.web.webbrowser.open")
-@patch("htag.runners.web.uvicorn.run")
-@patch("htag.runners.web.WebApp._run_with_reloader")
-def test_webapp_reload_master(mock_run_reloader, mock_uvicorn, mock_open, mock_thread):
-    """
-    Test WebApp with reload=True (and open_browser=True) when it's the MASTER process.
-    It should open the browser and start the watcher.
-    """
-    runner = WebApp(MyTestApp)
-    runner.run(open_browser=True, reload=True)
-    
-    assert getattr(MyTestApp, "_reload", False) is True
-
-    mock_run_reloader.assert_called_once()
-    mock_uvicorn.assert_not_called()
-    mock_thread.assert_called_once()
-
-
-@patch("htag.runners.web.threading.Thread")
-@patch("htag.runners.web.webbrowser.open")
-@patch("htag.runners.web.uvicorn.run")
-@patch("htag.runners.web.WebApp._run_with_reloader")
-def test_webapp_reload_child(mock_run_reloader, mock_uvicorn, mock_open, mock_thread):
-    """
-    Test WebApp with reload=True when it's the CHILD WORKER process.
-    It should NOT open the browser again, and should start uvicorn.
-    """
-    os.environ["HTAG_RELOADER"] = "1"
-    
-    runner = WebApp(MyTestApp)
-    runner.run(open_browser=True, reload=True)
-
-    mock_run_reloader.assert_not_called()
-    mock_uvicorn.assert_called_once()
-    mock_thread.assert_not_called()
-
-
-@patch("htag.runners.base.subprocess.Popen")
-@patch("htag.runners.base.time.sleep")
+@patch("htag.runner.subprocess.Popen")
+@patch("htag.runner.time.sleep")
 def test_base_run_with_reloader(mock_sleep, mock_popen):
     """
     Test the base watcher loop logic. We simulate that the child process 
     will immediately exit so it doesn't infinite loop.
     """
-    from htag.runners.base import BaseRunner
+    from htag.runner import ChromeApp
     
     # Fake process that returns 0 (normal exit) immediately
     mock_process = MagicMock()
@@ -117,7 +79,7 @@ def test_base_run_with_reloader(mock_sleep, mock_popen):
     mock_process.returncode = 0
     mock_popen.return_value = mock_process
     
-    runner = BaseRunner(MyTestApp)
+    runner = ChromeApp(MyTestApp)
     
     # We call it. Because process.poll() returns 0 immediately, 
     # the while process.poll() is None condition is false, and it breaks cleanly.

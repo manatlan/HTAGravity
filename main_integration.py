@@ -3,6 +3,8 @@ from starlette.applications import Starlette
 from starlette.responses import HTMLResponse
 import uvicorn
 
+from htag.server import WebServer
+
 # Create htag app
 class MyApp(Tag.App):
     def init(self):
@@ -10,12 +12,14 @@ class MyApp(Tag.App):
         self <= Tag.h2("htag2 App")
         self <= Tag.p("I am mounted at /app")
         self <= Tag.button("Click me", _onclick=lambda e: self.add(Tag.p("Action from /app !")))
+        
+        def on_bug(e):
+            raise Exception("bug")
+        self <= Tag.button("Bug", _onclick=on_bug)
         self <= Tag.div(Tag.a("Back to HTML home", _href="/"), _style="margin-top:10px")
 
-myapp = MyApp()
-
 # Main Starlette application creation
-app = Starlette(debug=True)
+app = Starlette()
 
 @app.route("/")
 async def home(request):
@@ -30,8 +34,10 @@ async def home(request):
         </html>
     """)
 
-# mount htag app
-app.mount("/app", myapp.app) 
+# mount htag app (Multi-Session mode)
+# By passing the CLASS 'MyApp', WebServer will create one instance per session.
+app.mount("/app", WebServer(MyApp).app) 
 
 if __name__ == "__main__":
+    print("🚀 Server started at http://127.0.0.1:8000")
     uvicorn.run(app, host="127.0.0.1", port=8000)

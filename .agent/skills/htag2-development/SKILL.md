@@ -137,11 +137,11 @@ def _onclick(self, event):
 ```
 
 ## Runner Choice & Developer Experience
-- **`ChromeApp`**: Primary choice. Attempts to launch a clean desktop-like Kiosk window via Chromium/Chrome binaries. If none are found, it falls back to opening the default system browser via `webbrowser.open`.
-- **`WebApp`**: For shared web access. Opens in the default browser in a new tab.
+- **`ChromeApp`**: Primary choice for local/desktop usage. Attempts to launch a clean desktop-like Kiosk window via Chromium/Chrome binaries. If none are found, it falls back to opening the default system browser via `webbrowser.open`.
+- **Starlette Integration**: Recommended for web access. Mount your `htag_app.app` into a Starlette instance.
 
 **Hot-Reloading for Development**:
-To prevent constantly closing and re-opening your application window during development, pass `reload=True` to any runner:
+To prevent constantly closing and re-opening your application window during development, pass `reload=True` to the runner:
 ```python
 if __name__ == "__main__":
     from htag import ChromeApp

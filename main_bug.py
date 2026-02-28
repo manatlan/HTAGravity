@@ -30,6 +30,6 @@ class App(Tag.App):
         self.should_crash.value = True
 
 if __name__ == "__main__":
-    from htag.runners import ChromeApp
+    from htag import ChromeApp
     # ChromeApp(App) forces debug=True by default. 
     ChromeApp(App).run()

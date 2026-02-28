@@ -1,35 +1,37 @@
 import html
-import json
 import threading
 import logging
 import weakref
 from typing import Any, List, Dict, Optional, Union, Callable, Set, Type
 
+
 class _HtagLocal(threading.local):
-    stack: List['GTag']
-    current_eval: Optional['GTag']  # Track which GTag is evaluating a reactive lambda
+    stack: List["GTag"]
+    current_eval: Optional["GTag"]  # Track which GTag is evaluating a reactive lambda
 
     def __init__(self) -> None:
         super().__init__()
         self.stack = []
         self.current_eval = None
 
+
 _ctx = _HtagLocal()
 
 logger = logging.getLogger("htag2")
 
+
 class State:
     def __init__(self, value: Any):
         self._value = value
-        self._observers: weakref.WeakSet['GTag'] = weakref.WeakSet()
-        
+        self._observers: weakref.WeakSet["GTag"] = weakref.WeakSet()
+
     @property
     def value(self) -> Any:
         # If a GTag is currently evaluating a reactive function, it records itself as an observer
         if _ctx.current_eval is not None:
             self._observers.add(_ctx.current_eval)
         return self._value
-        
+
     @value.setter
     def value(self, new_value: Any) -> None:
         if self._value != new_value:
@@ -42,12 +44,26 @@ class State:
         self.value = value
         return value
 
+
 VOID_ELEMENTS: Set[str] = {
-    "area", "base", "br", "col", "embed", "hr", "img", "input",
-    "link", "meta", "param", "source", "track", "wbr"
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
 }
 
-class GTag: # aka "Generic Tag"
+
+class GTag:  # aka "Generic Tag"
     tag: Optional[str] = None
     id: str
 
@@ -60,33 +76,41 @@ class GTag: # aka "Generic Tag"
         for k, v in self.__attrs.items():
             attr_name = k.replace("_", "-")
             val = self._eval_child(v, stringify=False)
-            
+
             if val is True:
                 attrs_list.append(attr_name)
             elif val is False or val is None:
                 continue
             else:
                 attrs_list.append(f'{attr_name}="{html.escape(str(val))}"')
-        
+
         for name, callback in self.__events.items():
             if isinstance(callback, str):
                 attrs_list.append(f'on{name}="{html.escape(callback)}"')
             else:
                 js = f"htag_event('{self.id}', '{name}', event)"
-                if getattr(callback, "_htag_prevent", False): js = f"event.preventDefault(); {js}"
-                if getattr(callback, "_htag_stop", False): js = f"event.stopPropagation(); {js}"
+                if getattr(callback, "_htag_prevent", False):
+                    js = f"event.preventDefault(); {js}"
+                if getattr(callback, "_htag_stop", False):
+                    js = f"event.stopPropagation(); {js}"
                 attrs_list.append(f'on{name}="{js}"')
 
         attrs = " ".join(attrs_list)
-        if attrs: attrs = " " + attrs
+        if attrs:
+            attrs = " " + attrs
         attrs += f' id="{self.id}"'
         return attrs
 
-    def __enter__(self) -> 'GTag':
+    def __enter__(self) -> "GTag":
         _ctx.stack.append(self)
         return self
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]], exc_val: Optional[BaseException], exc_tb: Any) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_val: Optional[BaseException],
+        exc_tb: Any,
+    ) -> None:
         _ctx.stack.pop()
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -100,12 +124,12 @@ class GTag: # aka "Generic Tag"
         self.__events: Dict[str, Union[Callable, str]] = {}
         self.__dirty = False
         self.__js_calls: List[str] = []
-        self.__rendered_callables: Dict[Callable, List['GTag']] = {}
-        
+        self.__rendered_callables: Dict[Callable, List["GTag"]] = {}
+
         # Public properties for tree traversal
-        self.childs: List[Union[str, 'GTag', Callable]] = []
-        self.parent: Optional['GTag'] = None
-        self.id: str = "" # placeholder
+        self.childs: List[Union[str, "GTag", Callable]] = []
+        self.parent: Optional["GTag"] = None
+        self.id: str = ""  # placeholder
 
         # If tag is not set by subclass (class attribute), take it from first arg
         if getattr(self, "tag", None) is None:
@@ -113,7 +137,7 @@ class GTag: # aka "Generic Tag"
                 self.tag = args[0].replace("_", "-")
                 args = args[1:]
             else:
-                self.tag = "div" # fallback
+                self.tag = "div"  # fallback
 
         self.id = f"{self.tag}-{id(self)}"
         logger.debug("Created Tag: %s (id: %s)", self.tag, self.id)
@@ -128,7 +152,7 @@ class GTag: # aka "Generic Tag"
                 self.__attrs[k[1:]] = v
             else:
                 left_kwargs[k] = v
-                
+
         _ctx.stack.append(self)
         try:
             self.init(*args, **left_kwargs)
@@ -163,9 +187,10 @@ class GTag: # aka "Generic Tag"
             if isinstance(child, GTag):
                 child._trigger_unmount()
 
-    def add(self, *content: Any) -> 'GTag':
+    def add(self, *content: Any) -> "GTag":
         for item in content:
-            if item is None: continue
+            if item is None:
+                continue
             if isinstance(item, (list, tuple)):
                 self.add(*item)
             else:
@@ -183,15 +208,15 @@ class GTag: # aka "Generic Tag"
                     elif callable(item):
                         # Reactive function (lambda), will be evaluated on render
                         pass
-                    
+
                     self.childs.append(item)
                     self.__dirty = True
         return self
 
-    def __iadd__(self, other: Any) -> 'GTag':
+    def __iadd__(self, other: Any) -> "GTag":
         return self.add(other)
 
-    def __le__(self, other: Any) -> 'GTag':
+    def __le__(self, other: Any) -> "GTag":
         return self.add(other)
 
     def __setattr__(self, name: str, value: Any) -> None:
@@ -203,9 +228,16 @@ class GTag: # aka "Generic Tag"
         - Setting an HTML attribute or event marks the tag as 'dirty' for client-side update.
         """
         if name in [
-            "_GTag__lock", "childs", "_GTag__attrs", "_GTag__events", 
-            "_GTag__dirty", "_GTag__js_calls", "_GTag__rendered_callables",
-            "parent", "tag", "id"
+            "_GTag__lock",
+            "childs",
+            "_GTag__attrs",
+            "_GTag__events",
+            "_GTag__dirty",
+            "_GTag__js_calls",
+            "_GTag__rendered_callables",
+            "parent",
+            "tag",
+            "id",
         ]:
             super().__setattr__(name, value)
         elif name.startswith("_on") and (callable(value) or isinstance(value, str)):
@@ -238,7 +270,7 @@ class GTag: # aka "Generic Tag"
             return other + [self]
         return [other, self]
 
-    def remove(self, item: Union[str, 'GTag', Callable]) -> 'GTag':
+    def remove(self, item: Union[str, "GTag", Callable]) -> "GTag":
         with self.__lock:
             if item in self.childs:
                 if isinstance(item, GTag):
@@ -250,14 +282,14 @@ class GTag: # aka "Generic Tag"
                 self.__dirty = True
         return self
 
-    def remove_self(self) -> 'GTag':
+    def remove_self(self) -> "GTag":
         if self.parent:
             self.parent.remove(self)
         return self
 
     @property
-    def root(self) -> Optional['GTag']:
-        current: Optional['GTag'] = self
+    def root(self) -> Optional["GTag"]:
+        current: Optional["GTag"] = self
         while current is not None:
             if isinstance(current, Tag.App):
                 return current
@@ -275,7 +307,7 @@ class GTag: # aka "Generic Tag"
         self.clear()
         self.add(str(value))
 
-    def clear(self) -> 'GTag':
+    def clear(self) -> "GTag":
         with self.__lock:
             for child in self.childs:
                 if isinstance(child, GTag):
@@ -283,11 +315,11 @@ class GTag: # aka "Generic Tag"
                         child._trigger_unmount()
                     child.parent = None
             self.childs = []
-            self._GTag__rendered_callables: Dict[Callable, List['GTag']] = {}
+            self._GTag__rendered_callables: Dict[Callable, List["GTag"]] = {}
             self.__dirty = True
         return self
 
-    def add_class(self, name: str) -> 'GTag':
+    def add_class(self, name: str) -> "GTag":
         with self.__lock:
             classes = self.__attrs.get("class", "").split()
             if name not in classes:
@@ -296,7 +328,7 @@ class GTag: # aka "Generic Tag"
                 self.__dirty = True
         return self
 
-    def remove_class(self, name: str) -> 'GTag':
+    def remove_class(self, name: str) -> "GTag":
         with self.__lock:
             classes = self.__attrs.get("class", "").split()
             if name in classes:
@@ -305,7 +337,7 @@ class GTag: # aka "Generic Tag"
                 self.__dirty = True
         return self
 
-    def call_js(self, script: str) -> 'GTag':
+    def call_js(self, script: str) -> "GTag":
         self.__js_calls.append(script)
         return self
 
@@ -318,24 +350,30 @@ class GTag: # aka "Generic Tag"
                 res = child()
             finally:
                 _ctx.current_eval = old_eval
-            
+
             # Track GTag objects generated by this callable for event dispatching
-            tags: List['GTag'] = []
+            tags: List["GTag"] = []
+
             def collect(item: Any) -> None:
                 if isinstance(item, GTag):
                     item.parent = self
                     tags.append(item)
                 elif isinstance(item, (list, tuple)):
-                    for i in item: collect(i)
+                    for i in item:
+                        collect(i)
+
             collect(res)
             self.__rendered_callables[child] = tags
-            
-            return self._eval_child(res, stringify) # Recursive call to handle list/tags returned
-        
+
+            return self._eval_child(
+                res, stringify
+            )  # Recursive call to handle list/tags returned
+
         if isinstance(child, (list, tuple)):
             return "".join(str(self._eval_child(i)) for i in child)
-            
-        if child is None: return "" if stringify else None
+
+        if child is None:
+            return "" if stringify else None
         return str(child) if stringify else child
 
     def __str__(self) -> str:
@@ -343,24 +381,27 @@ class GTag: # aka "Generic Tag"
         with self.__lock:
             attrs = self._render_attrs()
             content = "".join(str(self._eval_child(c)) for c in self.childs)
-            
+
             if self.tag in VOID_ELEMENTS:
                 return f"<{self.tag}{attrs}/>"
-                
+
             if self.tag:
                 return f"<{self.tag}{attrs}>{content}</{self.tag}>"
             else:
                 return content
+
 
 def prevent(func: Callable) -> Callable:
     """Decorator to mark an event handler as needing preventDefault()"""
     setattr(func, "_htag_prevent", True)
     return func
 
+
 def stop(func: Callable) -> Callable:
     """Decorator to mark an event handler as needing stopPropagation()"""
     setattr(func, "_htag_stop", True)
     return func
+
 
 class TagCreator:
     def __init__(self):
@@ -373,7 +414,7 @@ class TagCreator:
         """
         if name in self._registry:
             return self._registry[name]
-        
+
         # Create a dynamic subclass of GTag
         tag_name = name.lower().replace("_", "-")
         # We cache it in registry for performance and consistency
@@ -381,5 +422,5 @@ class TagCreator:
         self._registry[name] = new_class
         return new_class
 
-Tag = TagCreator() # Singleton instance
 
+Tag = TagCreator()  # Singleton instance

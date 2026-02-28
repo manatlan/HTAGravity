@@ -18,9 +18,9 @@
 
 ## rules
 
-- if you touch files in ./htag folder, ensure "uv run pytest" pass after your changes
 - always ensure a minimal, but robust, type hints in folder ./htag
-- if you add/change core feature, always update SKILL.md, README.md, and all relevant documentation
 - ensure comments are in english
 - when you add/edit examples (main*.py files), always use the skill best practices
 - when I say "core", focus on all files in ./htag folder
+- when I say "docs", focus on .agent/skills/htag2-development/SKILL.md, ./README.md, and alls files in ./docs folder
+- if you add/change core feature, always update docs
